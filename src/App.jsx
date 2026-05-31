@@ -169,45 +169,71 @@ export default function App() {
       <div className="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
         
         {/* Left Column: Focused State Engine */}
-        <div className="bg-[#1c1b1f] border border-[#2d2b30] rounded-[32px] p-8 flex flex-col items-center shadow-lg">
-          <div className="flex gap-2 mb-8 bg-[#121212] p-1.5 rounded-full border border-[#2d2b30]">
-            {['work', 'shortBreak', 'longBreak'].map((m) => (
-              <button
-                key={m}
-                onClick={() => switchMode(m)}
-                className={`px-4 py-1.5 rounded-full text-xs font-medium capitalize transition-all ${
-                  mode === m ? 'bg-[#aac7ff] text-[#002f66]' : 'text-[#919191] hover:text-[#e3e3e3]'
-                }`}
-              >
-                {m === 'work' ? 'Focus' : m === 'shortBreak' ? 'Short Break' : 'Long Break'}
-              </button>
-            ))}
-          </div>
-
-          <div className="text-7xl font-light tracking-tighter text-[#e3e3e3] my-4 tabular-nums">
-            {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
-          </div>
-
-          <div className="text-xs text-[#919191] flex items-center gap-1.5 mb-8">
-            <Flame className="h-3.5 w-3.5 text-[#ffb794]" />
-            <span>Daily Streak: <strong>{streak}</strong> focus intervals</span>
-          </div>
-
-          <div className="flex gap-4">
-            <button
-              onClick={() => setIsActive(!isActive)}
-              className="h-14 w-14 rounded-full bg-[#aac7ff] text-[#002f66] flex items-center justify-center shadow-md hover:scale-105 transition-transform"
-            >
-              {isActive ? <Pause className="h-6 w-6" /> : <Play className="h-6 w-6 fill-current" />}
-            </button>
-            <button
-              onClick={() => { setIsActive(false); switchMode(mode); }}
-              className="h-14 w-14 rounded-full bg-[#25232a] border border-[#49454f] text-[#e3e3e3] flex items-center justify-center hover:bg-[#2d2b30] transition-colors"
-            >
-              <RotateCcw className="h-5 w-5" />
-            </button>
-          </div>
+        {/* Left Column: Focused State Engine */}
+<div className="bg-[#1c1b1f] border border-[#2d2b30] rounded-[32px] p-8 flex flex-col items-center shadow-lg relative overflow-hidden">
+  
+  {/* Active Target Banner Frame */}
+  <div className="w-full min-h-[54px] flex flex-col items-center justify-center mb-6 px-4 py-2 bg-[#121212] rounded-2xl border border-[#2d2b30] border-dashed">
+    {tasks.find(t => t.id === activeTaskId) ? (
+      <div className="text-center w-full animate-fade-in">
+        <span className="text-[9px] uppercase tracking-widest text-[#919191] block mb-1 font-semibold">Active Focus Target</span>
+        <div className="flex items-center justify-center gap-2">
+          <span className={`text-[9px] px-2 py-0.5 rounded-full border font-medium ${getBucketStyle(tasks.find(t => t.id === activeTaskId).bucket)}`}>
+            {tasks.find(t => t.id === activeTaskId).bucket}
+          </span>
+          <span className="text-xs font-medium text-[#aac7ff] truncate max-w-[200px]">
+            {tasks.find(t => t.id === activeTaskId).text}
+          </span>
         </div>
+      </div>
+    ) : (
+      <span className="text-xs text-[#79747e] italic text-center">
+        Select an objective from your deck to link focus tracking
+      </span>
+    )}
+  </div>
+
+  {/* Mode Selectors */}
+  <div className="flex gap-2 mb-6 bg-[#121212] p-1.5 rounded-full border border-[#2d2b30]">
+    {['work', 'shortBreak', 'longBreak'].map((m) => (
+      <button
+        key={m}
+        onClick={() => switchMode(m)}
+        className={`px-4 py-1.5 rounded-full text-xs font-medium capitalize transition-all ${
+          mode === m ? 'bg-[#aac7ff] text-[#002f66]' : 'text-[#919191] hover:text-[#e3e3e3]'
+        }`}
+      >
+        {m === 'work' ? 'Focus' : m === 'shortBreak' ? 'Short Break' : 'Long Break'}
+      </button>
+    ))}
+  </div>
+
+  {/* Big Clock */}
+  <div className="text-7xl font-light tracking-tighter text-[#e3e3e3] my-2 tabular-nums select-none">
+    {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
+  </div>
+
+  <div className="text-xs text-[#919191] flex items-center gap-1.5 mb-6">
+    <Flame className="h-3.5 w-3.5 text-[#ffb794]" />
+    <span>Daily Streak: <strong>{streak}</strong> focus intervals</span>
+  </div>
+
+  {/* Timer Playback Hardware Controls */}
+  <div className="flex gap-4">
+    <button
+      onClick={() => setIsActive(!isActive)}
+      className="h-14 w-14 rounded-full bg-[#aac7ff] text-[#002f66] flex items-center justify-center shadow-md hover:scale-105 transition-transform"
+    >
+      {isActive ? <Pause className="h-6 w-6" /> : <Play className="h-6 w-6 fill-current" />}
+    </button>
+    <button
+      onClick={() => { setIsActive(false); switchMode(mode); }}
+      className="h-14 w-14 rounded-full bg-[#25232a] border border-[#49454f] text-[#e3e3e3] flex items-center justify-center hover:bg-[#2d2b30] transition-colors"
+    >
+      <RotateCcw className="h-5 w-5" />
+    </button>
+  </div>
+</div>
 
         {/* Right Column: Interactive Active Queue & Clean View Fallback */}
         <div className="bg-[#1c1b1f] border border-[#2d2b30] rounded-[32px] p-6 flex flex-col gap-6 shadow-lg h-[460px] justify-between">

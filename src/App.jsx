@@ -258,32 +258,72 @@ export default function App() {
           </div>
 
           {/* Simple Inline Quick-Add Card */}
-          <div className="bg-[#121212] p-3 rounded-2xl border border-[#2d2b30] flex gap-2 items-center">
-            <input
-              id="new-task-input"
-              type="text"
-              placeholder="Load new target..."
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && e.target.value.trim()) {
-                  handleAddTask(e.target.value.trim(), 'Work', 'Today');
-                  e.target.value = '';
-                }
-              }}
-              className="bg-transparent text-xs text-[#e3e3e3] focus:outline-none flex-1 px-2"
-            />
-            <button
-              onClick={() => {
-                const el = document.getElementById('new-task-input');
-                if (el && el.value.trim()) {
-                  handleAddTask(el.value.trim(), 'Work', 'Today');
-                  el.value = '';
-                }
-              }}
-              className="p-1.5 bg-[#aac7ff] text-[#002f66] rounded-lg hover:scale-105 transition-transform"
-            >
-              <Plus className="h-3.5 w-3.5" />
-            </button>
-          </div>
+        {/* Task Configuration Form Container */}
+<div className="bg-[#121212] border border-[#2d2b30] rounded-2xl p-4 mt-auto">
+  <span className="text-[10px] font-semibold uppercase tracking-wider text-[#919191] block mb-2">Deploy Task Card</span>
+  
+  <div className="space-y-3">
+    {/* Objective Input */}
+    <input
+      id="new-task-text"
+      type="text"
+      placeholder="What objective are you targeting?"
+      className="w-full bg-[#1c1b1f] border border-[#49454f] rounded-xl px-3 py-2 text-xs text-[#e3e3e3] focus:outline-none focus:border-[#aac7ff]"
+    />
+    
+    <div className="grid grid-cols-2 gap-2">
+      {/* Bucket Dropdown Selector */}
+      <div>
+        <label className="text-[9px] text-[#919191] block mb-1 px-1">Category Bucket</label>
+        <select
+          id="new-task-bucket"
+          className="w-full bg-[#1c1b1f] border border-[#49454f] rounded-xl px-2 py-2 text-[11px] text-[#e3e3e3] focus:outline-none"
+        >
+          <option value="Project">Project</option>
+          <option value="Firm Initiative">Firm Initiative</option>
+          <option value="Personal">Personal</option>
+        </select>
+      </div>
+
+      {/* Due Date Calendar Picker */}
+      <div>
+        <label className="text-[9px] text-[#919191] block mb-1 px-1">Due Date</label>
+        <input
+          id="new-task-date"
+          type="date"
+          className="w-full bg-[#1c1b1f] border border-[#49454f] rounded-xl px-2 py-1.5 text-[11px] text-[#e3e3e3] focus:outline-none focus:border-[#aac7ff]"
+        />
+      </div>
+    </div>
+
+    {/* Submission Trigger Button */}
+    <button
+      onClick={() => {
+        const textEl = document.getElementById('new-task-text');
+        const bucketEl = document.getElementById('new-task-bucket');
+        const dateEl = document.getElementById('new-task-date');
+
+        if (textEl && textEl.value.trim()) {
+          // Fallback to "Today" if no calendar date is selected
+          const finalDate = dateEl && dateEl.value ? dateEl.value : 'Today';
+          
+          handleAddTask(
+            textEl.value.trim(), 
+            bucketEl ? bucketEl.value : 'Project', 
+            finalDate
+          );
+
+          // Clear out text and date values for next task entry
+          textEl.value = '';
+          if (dateEl) dateEl.value = '';
+        }
+      }}
+      className="w-full py-2 bg-[#aac7ff] text-[#002f66] hover:bg-[#b6c4ff] rounded-xl font-medium text-xs tracking-wide transition-all flex items-center justify-center gap-1"
+    >
+      <Plus className="h-3.5 w-3.5" /> Initialize Target Card
+    </button>
+  </div>
+</div>
 
         </div>
 

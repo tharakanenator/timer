@@ -310,7 +310,7 @@ export default function App() {
                 </div>
               </div>
             ) : (
-              <span className="text-xs text-[#79747e] italic">Select an objective card to activate focus layout</span>
+              <span className="text-xs text-[#79747e] italic">Select an task card to activate focus layout</span>
             )}
           </div>
 
@@ -346,7 +346,7 @@ export default function App() {
             {/* DYNAMIC SETTINGS COMPONENT MODULE */}
             {showBucketSettings && (
               <div className="mb-4 p-3 bg-[#121212] border border-[#49454f] rounded-xl space-y-2 animate-fade-in">
-                <span className="text-[10px] font-semibold text-[#aac7ff] uppercase block">Edit Taxonomy Labels</span>
+                <span className="text-[10px] font-semibold text-[#aac7ff] uppercase block">Edit Task Types</span>
                 <div className="flex flex-wrap gap-1.5 py-1">
                   {buckets.map(b => (
                     <div key={b} className="flex items-center gap-1 px-2 py-0.5 bg-[#1c1b1f] border border-[#2d2b30] rounded-full text-[10px]">
@@ -356,7 +356,7 @@ export default function App() {
                   ))}
                 </div>
                 <div className="flex gap-2">
-                  <input type="text" placeholder="New classification type..." value={newBucketName} onChange={(e) => setNewBucketName(e.target.value)} className="bg-[#1c1b1f] border border-[#49454f] rounded-lg px-2 py-1 text-xs text-[#e3e3e3] flex-1 focus:outline-none" />
+                  <input type="text" placeholder="New task type..." value={newBucketName} onChange={(e) => setNewBucketName(e.target.value)} className="bg-[#1c1b1f] border border-[#49454f] rounded-lg px-2 py-1 text-xs text-[#e3e3e3] flex-1 focus:outline-none" />
                   <button onClick={handleAddBucket} className="px-3 bg-[#aac7ff] text-[#002f66] rounded-lg font-medium text-xs hover:bg-[#b6c4ff]">Add</button>
                 </div>
               </div>
@@ -384,7 +384,7 @@ export default function App() {
               ))}
               {tasks.length === 0 && (
                 <div className="text-center py-8 border border-dashed border-[#2d2b30] rounded-xl bg-[#151418]">
-                  <p className="text-xs text-[#79747e] px-4">Deck clear. Deploy a card from below to initialize analytics tracking.</p>
+                  <p className="text-xs text-[#79747e] px-4">No tasks available. Add a new task using the Add Task Button.</p>
                 </div>
               )}
             </div>
@@ -395,7 +395,7 @@ export default function App() {
             <input id="new-task-text" type="text" placeholder="Specify objective pipeline..." className="w-full bg-[#1c1b1f] border border-[#49454f] rounded-xl px-3 py-2 text-xs text-[#e3e3e3] focus:outline-none focus:border-[#aac7ff]" />
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="text-[9px] text-[#919191] block mb-1 px-1">Classification Lane</label>
+                <label className="text-[9px] text-[#919191] block mb-1 px-1">Task Type</label>
                 <select id="new-task-bucket" className="w-full bg-[#1c1b1f] border border-[#49454f] rounded-xl px-2 py-2 text-[11px] text-[#e3e3e3] focus:outline-none">
                   {buckets.map(b => <option key={b} value={b}>{b}</option>)}
                 </select>
@@ -418,7 +418,7 @@ export default function App() {
               }}
               className="w-full py-2 bg-[#aac7ff] text-[#002f66] hover:bg-[#b6c4ff] rounded-xl font-medium text-xs tracking-wide transition-all flex items-center justify-center gap-1"
             >
-              <Plus className="h-3.5 w-3.5" /> Initialize Target Card
+              <Plus className="h-3.5 w-3.5" /> Add Task
             </button>
           </div>
 

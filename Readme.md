@@ -1,43 +1,52 @@
-# Pomo.Material v2 🎯
+# Pomo.Material v3 🎯
 
-A sleek, minimalist, cloud-synced Pomodoro focus engine built with React, Tailwind CSS, and Upstash Redis. Designed to track deep-work blocks seamlessly across multiple devices with a secure token-gate authorization system.
+A sleek, minimalist, multi-user Pomodoro focus engine built with React, Tailwind CSS, and Upstash Redis. This version features a secure cloud identity layer, letting multiple users register and manage independent, isolated task decks and custom categories on a single deployment.
 
 ---
 
 ## ✨ Features
 
-* **Task-Aware Focus Engine:** Link specific tasks directly to your countdown timer to maintain zero-in visibility on active objectives.
-* **Dynamic Metadata Classification:** Define your own workflow buckets directly through the UI dashboard (e.g., `Project`, `Firm Initiative`, `Personal`). Targets map dynamically to your custom categories alongside explicit calendar due dates.
-* **Cross-Device Cloud Sync:** Powered by Upstash Redis to securely save active decks and completed archives across mobile and desktop browsers instantly.
-* **Token-Gate Authentication:** Protects your personal productivity datasets and metrics behind an encrypted master passcode layer.
-* **Audit Logging:** Automatic high-fidelity timestamping captures precise dates and times for both target initialization and task completion.
-* **Gamified Rewards:** Integrated with interactive reward animations and milestone tracking components to build streak consistency.
+* **Multi-User Cloud Isolation:** Secure registration and login gates powered by serverless cryptographic verification. Each user gets an independent data partition.
+* **Task-Aware Focus Engine:** Link active task cards directly to your countdown timer to maintain zero-in visibility on your current objective.
+* **Dynamic Taxonomy Customization:** Create, configure, and delete your own custom workflow buckets (e.g., `Project 101`, `Firm Initiative`, `Personal`) directly through the UI.
+* **Cross-Device Session Sync:** Powered by Upstash Redis to securely persist active queues, completed task logs, and category profiles across mobile and desktop browsers.
+* **Native Cryptographic Hashing:** Uses Node.js's native `crypto` library (PBKDF2) to securely salt and hash user credentials before they touch the cloud.
+* **Zero-Dependency Auth Maintenance:** Eliminates heavy external npm compiled binaries (like native bcrypt) to ensure lightning-fast serverless execution on Vercel Edge infrastructure.
 
 ---
 
 ## 🛠️ Architecture & Tech Stack
 
 * **Frontend UI:** React 19 + Vite (Modern SPA Framework)
-* **Styling Architecture:** Tailwind CSS + Lucide React Icons (Dark-theme Material Aesthetics)
-* **Backend Middleware:** Vercel Serverless Edge Functions
-* **Database Infrastructure:** Upstash Redis (Durable Key-Value Cloud Storage)
+* **Styling & Design:** Tailwind CSS + Lucide React Icons (Dark-theme Material Aesthetics)
+* **Backend Framework:** Vercel Serverless Edge Functions
+* **Database Layer:** Upstash Redis (Durable, Low-Latency Key-Value Cloud Storage)
+* **Security Middleware:** Native Node.js `crypto` API (PBKDF2 Hashing Engine)
 
 ---
 
-## 🚀 Environment Setup & Deployment
+## 🗄️ Database Schema Key Mapping
 
-To run this application or deploy your own clone via Vercel, you must configure your cloud environment variables.
+Data structures are securely partitioned in Upstash Redis using the user's standardized username as a namespace boundary:
+
+* `pomo_user:[username]` ➡️ Object containing the unique password hash and random cryptographic salt.
+* `pomo_tasks:[username]` ➡️ Array containing active task objects (text, bucket selection, due date).
+* `pomo_completed:[username]` ➡️ Array logging completed task metadata and completion timestamps.
+* `pomo_buckets:[username]` ➡️ Array defining user-customized dropdown workflow categories.
+
+---
+
+## 🚀 Deployment & Environment Setup
+
+To deploy this workspace instance, configure the following environmental parameters on your Vercel hosting platform:
 
 ### 1. Database Provisioning
 1. Navigate to your **Vercel Project Dashboard**.
 2. Go to the **Storage** tab and provision a new **Upstash Redis** database instance.
-3. Link the database to your project. Vercel will automatically inject the `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` configurations securely.
+3. Link the database to your project. Vercel will automatically inject `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` variables.
 
-### 2. Encryption Gate Configuration
-1. In your Vercel project, go to **Settings** ➡️ **Environment Variables**.
-2. Add a new secret variable with the following configurations (Ensure **Production**, **Preview**, and **Development** targets are checked):
-   * **Key:** `APP_SECRET_PASSCODE`
-   * **Value:** `YourCustomSecretPasscode`
+### 2. Deployment
+Commit the updated code directly to your `main` branch. Vercel will automatically run the build sequence, parse the Node native `crypto` layer, and expose your global application workspace live to your web URL.
 
 ---
 
@@ -45,9 +54,9 @@ To run this application or deploy your own clone via Vercel, you must configure 
 
 ```text
 ├── api/
-│   └── sync.js           # Serverless API endpoint controlling DB transactions & Auth Checks
+│   └── sync.js           # Multi-tenant API handling Registration, Login, and Cloud CRUD
 ├── src/
-│   ├── App.jsx           # Core application layer, state engines, and UI layouts
-│   └── main.jsx          # React SPA mounting point
-├── package.json          # Dependency logs and compilation scripts
+│   ├── App.jsx           # Monolithic Frontend layout, state engines, and UI views
+│   └── main.jsx          # React SPA entry mounting point
+├── package.json          # Dependency configurations and build scripts
 └── README.md             # Project documentation

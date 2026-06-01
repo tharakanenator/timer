@@ -1,65 +1,72 @@
 import React, { useState, useEffect } from 'react';
 import confetti from 'canvas-confetti';
-import { Play, Pause, RotateCcw, Plus, Trash2, Flame, Settings } from 'lucide-react';
+import { Play, Pause, RotateCcw, Plus, Trash2, Flame, Settings, User, Lock, ArrowRight } from 'lucide-react';
 
 export default function App() {
-  // --- Core States ---
+  // --- Auth Session State ---
+  const [username, setUsername] = useState(() => localStorage.getItem('pomo_user_session') || '');
+  const [passcode, setPasscode] = useState(() => localStorage.getItem('pomo_token_session') || '');
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  
+  // --- Login Screen Interactive State ---
+  const [isSignUpMode, setIsSignUpMode] = useState(false);
+  const [inputUser, setInputUser] = useState('');
+  const [inputPass, setInputPass] = useState('');
+  const [authFeedback, setAuthFeedback] = useState('');
+
+  // --- Dynamic Dashboard States ---
   const [tasks, setTasks] = useState([]);
   const [completedTasks, setCompletedTasks] = useState([]);
   const [activeTaskId, setActiveTaskId] = useState(null);
-  
-  // --- Dynamic Configurable Buckets State ---
   const [buckets, setBuckets] = useState(['Project', 'Firm Initiative', 'Personal']);
   const [showBucketSettings, setShowBucketSettings] = useState(false);
   const [newBucketName, setNewBucketName] = useState('');
 
-  // --- Security Gate State ---
-  const [passcode, setPasscode] = useState(() => localStorage.getItem('material_pomo_token') || '');
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-
-  // --- Timer States ---
+  // --- Core Timer Configurations ---
   const [minutes, setMinutes] = useState(25);
   const [seconds, setSeconds] = useState(0);
   const [isActive, setIsActive] = useState(false);
   const [mode, setMode] = useState('work'); 
   const [streak, setStreak] = useState(0);
 
-  // 1. Hydrate App from Cloud
+  // 1. Session Validator Engine
   useEffect(() => {
-    if (!passcode) return;
+    if (!username || !passcode) return;
 
-    async function loadCloudData() {
+    async function hydrateProfile() {
       try {
         const res = await fetch('/api/sync', {
-          headers: { 'x-app-passcode': passcode }
+          headers: { 
+            'x-app-user': username,
+            'x-app-passcode': passcode 
+          }
         });
 
         if (res.status === 200) {
           const data = await res.json();
           if (data.tasks) setTasks(data.tasks);
           if (data.completedTasks) setCompletedTasks(data.completedTasks);
-          if (data.buckets) setBuckets(data.buckets); // Load custom buckets
+          if (data.buckets) setBuckets(data.buckets);
           setIsAuthenticated(true);
-          localStorage.setItem('material_pomo_token', passcode);
         } else {
-          setIsAuthenticated(false);
-          localStorage.removeItem('material_pomo_token');
+          handleLogOut();
         }
       } catch (e) {
-        console.error("Cloud connection error:", e);
+        console.error("Hydration processing failure:", e);
       }
     }
-    loadCloudData();
-  }, [passcode]);
+    hydrateProfile();
+  }, [username, passcode]);
 
-  // 2. Unified Sync Engine
+  // 2. Cloud Synchronization Relay
   const syncToCloud = async (updatedTasks, updatedCompleted, updatedBuckets) => {
-    if (!passcode) return;
+    if (!username || !passcode) return;
     try {
       await fetch('/api/sync', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
+          'x-app-user': username,
           'x-app-passcode': passcode
         },
         body: JSON.stringify({ 
@@ -69,11 +76,60 @@ export default function App() {
         })
       });
     } catch (e) {
-      console.error("Cloud database sync failed:", e);
+      console.error("Cloud engine sync failure:", e);
     }
   };
 
-  // 3. Timer Engine
+  // 3. User Credentials Handshake Routine
+  const handleAuthSubmit = async (e) => {
+    e.preventDefault();
+    setAuthFeedback('');
+    if (!inputUser.trim() || !inputPass.trim()) return;
+
+    const actionType = isSignUpMode ? 'signup' : 'login';
+    try {
+      const res = await fetch('/api/sync', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-action': actionType
+        },
+        body: JSON.stringify({ username: inputUser.trim(), password: inputPass.trim() })
+      });
+
+      const data = await res.json();
+
+      if (res.status === 200) {
+        if (isSignUpMode) {
+          setAuthFeedback('Account authorized! Switching to login...');
+          setIsSignUpMode(false);
+          setInputPass('');
+        } else {
+          localStorage.setItem('pomo_user_session', inputUser.trim().toLowerCase());
+          localStorage.setItem('pomo_token_session', inputPass.trim());
+          setUsername(inputUser.trim().toLowerCase());
+          setPasscode(inputPass.trim());
+        }
+      } else {
+        setAuthFeedback(data.error || 'Authentication processing rejected');
+      }
+    } catch (err) {
+      setAuthFeedback('Network gateway processing failure');
+    }
+  };
+
+  const handleLogOut = () => {
+    localStorage.removeItem('pomo_user_session');
+    localStorage.removeItem('pomo_token_session');
+    setUsername('');
+    setPasscode('');
+    setIsAuthenticated(false);
+    setTasks([]);
+    setBuckets(['Project', 'Firm Initiative', 'Personal']);
+    setActiveTaskId(null);
+  };
+
+  // 4. Timer Logic
   useEffect(() => {
     let interval = null;
     if (isActive) {
@@ -104,12 +160,12 @@ export default function App() {
     return () => clearInterval(interval);
   }, [isActive, minutes, seconds, mode]);
 
-  // 4. Task Handlers
+  // 5. Core Operational Task Management Handlers
   const handleAddTask = (text, bucket, dueDate) => {
     const newTask = {
       id: Date.now().toString(),
       text,
-      bucket: bucket || buckets[0] || 'General',
+      bucket: bucket || buckets[0] || 'Project',
       dueDate: dueDate || 'Today'
     };
     const updated = [...tasks, newTask];
@@ -118,38 +174,34 @@ export default function App() {
   };
 
   const handleCompleteTask = (id) => {
-    const taskToComplete = tasks.find(t => t.id === id);
-    if (!taskToComplete) return;
+    const target = tasks.find(t => t.id === id);
+    if (!target) return;
 
-    const updatedActive = tasks.filter(t => t.id !== id);
-    const updatedCompleted = [...completedTasks, { ...taskToComplete, completedAt: new Date().toLocaleDateString() }];
+    const updatedTasks = tasks.filter(t => t.id !== id);
+    const updatedCompleted = [...completedTasks, { ...target, completedAt: new Date().toLocaleDateString() }];
     
-    setTasks(updatedActive);
+    setTasks(updatedTasks);
     setCompletedTasks(updatedCompleted);
     if (activeTaskId === id) setActiveTaskId(null);
     
-    confetti({ particleCount: 50, spread: 40 });
-    syncToCloud(updatedActive, updatedCompleted, buckets);
+    confetti({ particleCount: 60, spread: 45 });
+    syncToCloud(updatedTasks, updatedCompleted, buckets);
   };
 
-  // 5. Configurable Bucket Handlers
   const handleAddBucket = () => {
-    if (!newBucketName.trim()) return;
-    if (buckets.includes(newBucketName.trim())) return;
-
-    const updatedBuckets = [...buckets, newBucketName.trim()];
-    setBuckets(updatedBuckets);
+    if (!newBucketName.trim() || buckets.includes(newBucketName.trim())) return;
+    const nextBuckets = [...buckets, newBucketName.trim()];
+    setBuckets(nextBuckets);
     setNewBucketName('');
-    syncToCloud(tasks, completedTasks, updatedBuckets);
+    syncToCloud(tasks, completedTasks, nextBuckets);
   };
 
-  const handleRemoveBucket = (bucketToRemove) => {
-    const updatedBuckets = buckets.filter(b => b !== bucketToRemove);
-    setBuckets(updatedBuckets);
-    syncToCloud(tasks, completedTasks, updatedBuckets);
+  const handleRemoveBucket = (targetBucket) => {
+    const nextBuckets = buckets.filter(b => b !== targetBucket);
+    setBuckets(nextBuckets);
+    syncToCloud(tasks, completedTasks, nextBuckets);
   };
 
-  // Dynamic Border Color generator for custom labels
   const getBucketStyle = (bucket) => {
     const clean = bucket?.toLowerCase() || '';
     if (clean === 'project') return 'bg-[#212433] text-[#aac7ff] border-[#30374d]';
@@ -158,17 +210,50 @@ export default function App() {
     return 'bg-[#23242a] text-[#c4c6cf] border-[#43474e]';
   };
 
+  // --- RENDERING NODE 1: AUTH LAYER GATE SCREEN ---
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-[#121212] flex flex-col items-center justify-center p-4">
-        <div className="w-full max-w-sm bg-[#1c1b1f] border border-[#2d2b30] rounded-[24px] p-6 text-center shadow-xl">
-          <span className="text-sm font-semibold tracking-wider text-[#aac7ff] uppercase block mb-4">Workspace Encrypted</span>
-          <input
-            type="password"
-            placeholder="Passcode"
-            onKeyDown={(e) => { if (e.key === 'Enter') setPasscode(e.target.value); }}
-            className="w-full bg-[#121212] border border-[#49454f] rounded-xl px-4 py-2.5 text-center text-sm text-[#e3e3e3] focus:outline-none focus:border-[#aac7ff] tracking-widest"
-          />
+        <div className="w-full max-w-sm bg-[#1c1b1f] border border-[#2d2b30] rounded-[28px] p-6 shadow-xl space-y-6">
+          <div className="text-center">
+            <span className="text-[10px] font-bold tracking-widest text-[#aac7ff] uppercase">Workspace Gateway v3</span>
+            <h1 className="text-xl font-medium text-[#e3e3e3] mt-1">{isSignUpMode ? 'Deploy Cloud Identity' : 'Authenticate Session'}</h1>
+          </div>
+
+          <form onSubmit={handleAuthSubmit} className="space-y-3">
+            <div className="relative">
+              <User className="absolute left-3 top-3 h-4 w-4 text-[#919191]" />
+              <input 
+                type="text" 
+                placeholder="Username" 
+                value={inputUser} 
+                onChange={(e) => setInputUser(e.target.value)} 
+                className="w-full bg-[#121212] border border-[#49454f] rounded-xl pl-10 pr-4 py-2.5 text-xs text-[#e3e3e3] focus:outline-none focus:border-[#aac7ff]" 
+              />
+            </div>
+            <div className="relative">
+              <Lock className="absolute left-3 top-3 h-4 w-4 text-[#919191]" />
+              <input 
+                type="password" 
+                placeholder="Password" 
+                value={inputPass} 
+                onChange={(e) => setInputPass(e.target.value)} 
+                className="w-full bg-[#121212] border border-[#49454f] rounded-xl pl-10 pr-4 py-2.5 text-xs text-[#e3e3e3] focus:outline-none focus:border-[#aac7ff]" 
+              />
+            </div>
+
+            {authFeedback && <div className="text-[11px] text-center text-[#ffb4a2] bg-[#2d1f1c] p-2 rounded-lg border border-[#4d2d26]">{authFeedback}</div>}
+
+            <button type="submit" className="w-full py-2.5 bg-[#aac7ff] text-[#002f66] rounded-xl font-semibold text-xs tracking-wide hover:bg-[#b6c4ff] transition-all flex items-center justify-center gap-1.5">
+              {isSignUpMode ? 'Initialize Profile' : 'Unlock Dashboard'} <ArrowRight className="h-3.5 w-3.5" />
+            </button>
+          </form>
+
+          <div className="text-center">
+            <button onClick={() => { setIsSignUpMode(!isSignUpMode); setAuthFeedback(''); }} className="text-xs text-[#919191] hover:text-[#aac7ff] underline underline-offset-4">
+              {isSignUpMode ? 'Already registered? Log in here' : 'Need an isolated cloud account? Create one'}
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -176,14 +261,25 @@ export default function App() {
 
   const currentActiveTask = tasks.find(t => t.id === activeTaskId);
 
+  // --- RENDERING NODE 2: CORE WORKSPACE DASHBOARD ---
   return (
-    <div className="min-h-screen bg-[#121212] text-[#e3e3e3] font-sans flex flex-col items-center py-12 px-4">
+    <div className="min-h-screen bg-[#121212] text-[#e3e3e3] font-sans flex flex-col items-center py-10 px-4">
+      
+      {/* Session Management Header Banner */}
+      <div className="w-full max-w-4xl flex justify-between items-center mb-6 px-4">
+        <div className="flex items-center gap-2">
+          <div className="h-2 w-2 bg-[#bacfbc] rounded-full animate-pulse" />
+          <span className="text-xs text-[#919191]">Active Terminal: <strong className="text-[#e3e3e3]">{username}</strong></span>
+        </div>
+        <button onClick={handleLogOut} className="px-3 py-1 bg-[#25232a] border border-[#49454f] text-[#919191] hover:text-[#ffb4a2] hover:border-[#4d3630] rounded-lg text-[11px] font-medium transition-colors">
+          Lock Console
+        </button>
+      </div>
+
       <div className="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
         
-        {/* TIMER PANEL */}
+        {/* LEFT COMPONENT: CORE TIMER RUNTIME */}
         <div className="bg-[#1c1b1f] border border-[#2d2b30] rounded-[32px] p-8 flex flex-col items-center shadow-lg relative">
-          
-          {/* Active Target Banner */}
           <div className="w-full min-h-[54px] flex flex-col items-center justify-center mb-6 px-4 py-2 bg-[#121212] rounded-2xl border border-[#2d2b30] border-dashed">
             {currentActiveTask ? (
               <div className="text-center w-full">
@@ -198,7 +294,7 @@ export default function App() {
                 </div>
               </div>
             ) : (
-              <span className="text-xs text-[#79747e] italic">Select an objective from your deck to link tracking</span>
+              <span className="text-xs text-[#79747e] italic">Select an objective card to activate focus layout</span>
             )}
           </div>
 
@@ -208,7 +304,7 @@ export default function App() {
 
           <div className="text-xs text-[#919191] flex items-center gap-1.5 mb-6">
             <Flame className="h-3.5 w-3.5 text-[#ffb794]" />
-            <span>Streak: <strong>{streak}</strong> focus blocks</span>
+            <span>Streak Velocity: <strong>{streak}</strong> completion intervals</span>
           </div>
 
           <div className="flex gap-4">
@@ -221,23 +317,20 @@ export default function App() {
           </div>
         </div>
 
-        {/* ACTIVITY DECK */}
+        {/* RIGHT COMPONENT: CONFIGURED QUEUE DECK */}
         <div className="bg-[#1c1b1f] border border-[#2d2b30] rounded-[32px] p-6 flex flex-col gap-4 shadow-lg min-h-[460px] justify-between">
           <div>
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-sm font-semibold tracking-wider text-[#919191] uppercase">Activity Deck</h2>
-              <button 
-                onClick={() => setShowBucketSettings(!showBucketSettings)} 
-                className="p-1.5 rounded-lg bg-[#25232a] border border-[#49454f] text-[#919191] hover:text-[#e3e3e3]"
-              >
+              <h2 className="text-sm font-semibold tracking-wider text-[#919191] uppercase">Activity Deck Queue</h2>
+              <button onClick={() => setShowBucketSettings(!showBucketSettings)} className="p-1.5 rounded-lg bg-[#25232a] border border-[#49454f] text-[#919191] hover:text-[#e3e3e3] transition-colors">
                 <Settings className="h-3.5 w-3.5" />
               </button>
             </div>
 
-            {/* DYNAMIC BUCKETS SETUP PANEL */}
+            {/* DYNAMIC SETTINGS COMPONENT MODULE */}
             {showBucketSettings && (
-              <div className="mb-4 p-3 bg-[#121212] border border-[#49454f] rounded-xl animate-fade-in space-y-2">
-                <span className="text-[10px] font-semibold text-[#aac7ff] uppercase block">Manage Category Buckets</span>
+              <div className="mb-4 p-3 bg-[#121212] border border-[#49454f] rounded-xl space-y-2 animate-fade-in">
+                <span className="text-[10px] font-semibold text-[#aac7ff] uppercase block">Edit Taxonomy Labels</span>
                 <div className="flex flex-wrap gap-1.5 py-1">
                   {buckets.map(b => (
                     <div key={b} className="flex items-center gap-1 px-2 py-0.5 bg-[#1c1b1f] border border-[#2d2b30] rounded-full text-[10px]">
@@ -247,19 +340,13 @@ export default function App() {
                   ))}
                 </div>
                 <div className="flex gap-2">
-                  <input 
-                    type="text" 
-                    placeholder="New bucket title..." 
-                    value={newBucketName}
-                    onChange={(e) => setNewBucketName(e.target.value)}
-                    className="bg-[#1c1b1f] border border-[#49454f] rounded-lg px-2 py-1 text-xs text-[#e3e3e3] flex-1 focus:outline-none"
-                  />
-                  <button onClick={handleAddBucket} className="px-3 bg-[#aac7ff] text-[#002f66] rounded-lg font-medium text-xs">Add</button>
+                  <input type="text" placeholder="New classification type..." value={newBucketName} onChange={(e) => setNewBucketName(e.target.value)} className="bg-[#1c1b1f] border border-[#49454f] rounded-lg px-2 py-1 text-xs text-[#e3e3e3] flex-1 focus:outline-none" />
+                  <button onClick={handleAddBucket} className="px-3 bg-[#aac7ff] text-[#002f66] rounded-lg font-medium text-xs hover:bg-[#b6c4ff]">Add</button>
                 </div>
               </div>
             )}
 
-            {/* TASKS LIST */}
+            {/* INTERACTIVE CARDS RENDER LOOP */}
             <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1">
               {tasks.map((task) => (
                 <div
@@ -271,7 +358,7 @@ export default function App() {
                 >
                   <div className="flex justify-between items-start gap-1 mb-2">
                     <span className="text-xs font-medium text-[#e3e3e3] line-clamp-2 flex-1">{task.text}</span>
-                    <button onClick={(e) => { e.stopPropagation(); handleCompleteTask(task.id); }} className="h-6 w-6 rounded-full bg-[#25232a] border border-[#49454f] text-[#bacfbc] flex items-center justify-center text-xs ml-1 hover:bg-[#bacfbc] hover:text-[#002f66]">✓</button>
+                    <button onClick={(e) => { e.stopPropagation(); handleCompleteTask(task.id); }} className="h-6 w-6 rounded-full bg-[#25232a] border border-[#49454f] text-[#bacfbc] flex items-center justify-center text-xs ml-1 hover:bg-[#bacfbc] hover:text-[#002f66] transition-all">✓</button>
                   </div>
                   <div className="flex flex-wrap items-center gap-1.5 text-[9px] text-[#919191]">
                     <span className={`px-1.5 py-0.5 rounded-full border ${getBucketStyle(task.bucket)}`}>{task.bucket}</span>
@@ -281,24 +368,24 @@ export default function App() {
               ))}
               {tasks.length === 0 && (
                 <div className="text-center py-8 border border-dashed border-[#2d2b30] rounded-xl bg-[#151418]">
-                  <p className="text-xs text-[#79747e] px-4">All clear. Deploy a card below to begin focus blocks.</p>
+                  <p className="text-xs text-[#79747e] px-4">Deck clear. Deploy a card from below to initialize analytics tracking.</p>
                 </div>
               )}
             </div>
           </div>
 
-          {/* DYNAMIC CARD DEPLOYMENT PANEL */}
+          {/* PERSISTENT INITIALIZATION FOOTER CONFIGURATOR */}
           <div className="bg-[#121212] border border-[#2d2b30] rounded-2xl p-4 mt-auto space-y-3">
-            <input id="new-task-text" type="text" placeholder="What objective are you targeting?" className="w-full bg-[#1c1b1f] border border-[#49454f] rounded-xl px-3 py-2 text-xs text-[#e3e3e3] focus:outline-none focus:border-[#aac7ff]" />
+            <input id="new-task-text" type="text" placeholder="Specify objective pipeline..." className="w-full bg-[#1c1b1f] border border-[#49454f] rounded-xl px-3 py-2 text-xs text-[#e3e3e3] focus:outline-none focus:border-[#aac7ff]" />
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="text-[9px] text-[#919191] block mb-1 px-1">Category Bucket</label>
+                <label className="text-[9px] text-[#919191] block mb-1 px-1">Classification Lane</label>
                 <select id="new-task-bucket" className="w-full bg-[#1c1b1f] border border-[#49454f] rounded-xl px-2 py-2 text-[11px] text-[#e3e3e3] focus:outline-none">
                   {buckets.map(b => <option key={b} value={b}>{b}</option>)}
                 </select>
               </div>
               <div>
-                <label className="text-[9px] text-[#919191] block mb-1 px-1">Due Date</label>
+                <label className="text-[9px] text-[#919191] block mb-1 px-1">Timeline Deadline</label>
                 <input id="new-task-date" type="date" className="w-full bg-[#1c1b1f] border border-[#49454f] rounded-xl px-2 py-1.5 text-[11px] text-[#e3e3e3] focus:outline-none" />
               </div>
             </div>

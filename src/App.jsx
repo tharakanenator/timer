@@ -122,38 +122,15 @@ const updateBreakPreference = (val) => {
     setSeconds(0);
   }
 };
-  // 1. Data Hydration Orchestrator
- useEffect(() => {
-  let interval = null;
-  if (isActive) {
-    interval = setInterval(() => {
-      if (seconds > 0) {
-        setSeconds(seconds - 1);
-      } else if (seconds === 0) {
-        if (minutes === 0) {
-          // 🔔 Timer completed! Handle automatic phase flipping
-          if (mode === 'work') {
-            setMode('shortBreak');
-            setMinutes(breakLength); // 🔄 UPDATED: Use your break custom length
-            setStreak(prev => prev + 1);
-            // triggerConfetti(); 
-          } else {
-            setMode('work');
-            setMinutes(focusLength); // 🔄 UPDATED: Use your focus custom length
-          }
-          setSeconds(0);
-          setIsActive(false);
-        } else {
-          setMinutes(minutes - 1);
-          setSeconds(59);
-        }
-      }
-    }, 1000);
-  } else {
-    clearInterval(interval);
-  }
-  return () => clearInterval(interval);
-}, [isActive, minutes, seconds, mode, focusLength, breakLength]); // Added dependencies
+ // 1. Data Hydration Orchestrator
+  useEffect(() => {
+    if (isGuestMode) {
+      setTasks(JSON.parse(localStorage.getItem('pomo_guest_tasks') || '[]'));
+      setCompletedTasks(JSON.parse(localStorage.getItem('pomo_guest_completed') || '[]'));
+      setBuckets(JSON.parse(localStorage.getItem('pomo_guest_buckets') || '["Project", "Firm Initiative", "Personal"]'));
+      setIsAuthenticated(true);
+      return;
+    }
 
     if (!username || !passcode) return;
     async function hydrateProfile() {
@@ -176,6 +153,40 @@ const updateBreakPreference = (val) => {
     }
     hydrateProfile();
   }, [username, passcode, isGuestMode]);
+
+
+  // 2. Real-Time Focus Clock Interval Routine
+  useEffect(() => {
+    let interval = null;
+    if (isActive) {
+      interval = setInterval(() => {
+        if (seconds > 0) {
+          setSeconds(seconds - 1);
+        } else if (seconds === 0) {
+          if (minutes === 0) {
+            // 🔔 Timer completed! Handle automatic phase flipping
+            if (mode === 'work') {
+              setMode('shortBreak');
+              setMinutes(breakLength); 
+              setStreak(prev => prev + 1);
+              if (typeof confetti === 'function') confetti({ particleCount: 150, spread: 80 });
+            } else {
+              setMode('work');
+              setMinutes(focusLength); 
+            }
+            setSeconds(0);
+            setIsActive(false);
+          } else {
+            setMinutes(minutes - 1);
+            setSeconds(59);
+          }
+        }
+      }, 1000);
+    } else {
+      clearInterval(interval);
+    }
+    return () => clearInterval(interval);
+  }, [isActive, minutes, seconds, mode, focusLength, breakLength]);
 
   // 2. Hybrid Data Synchronization Engine
   const syncToStorage = async (updatedTasks, updatedCompleted, updatedBuckets) => {

@@ -70,13 +70,23 @@ export default function App() {
   const [buckets, setBuckets] = useState(['Project', 'Firm Initiative', 'Personal']);
   const [showBucketSettings, setShowBucketSettings] = useState(false);
   const [newBucketName, setNewBucketName] = useState('');
-
+// ➕ ADD YOUR NEW TIMER CUSTOMIZATION STATES HERE:
+  const [focusLength, setFocusLength] = useState(() => {
+    const saved = localStorage.getItem('pomo_pref_focus_length');
+    return saved ? parseInt(saved, 10) : 25; // Defaults to 25 mins
+  });
+  const [breakLength, setBreakLength] = useState(() => {
+    const saved = localStorage.getItem('pomo_pref_break_length');
+    return saved ? parseInt(saved, 10) : 5; // Defaults to 5 mins
+  });
   // --- Real-time Countdown Core Drivers ---
-  const [minutes, setMinutes] = useState(25);
+  const [minutes, setMinutes] = useState(focusLength);
   const [seconds, setSeconds] = useState(0);
   const [isActive, setIsActive] = useState(false);
   const [mode, setMode] = useState('work'); 
   const [streak, setStreak] = useState(0);
+
+
 
   // --- Dynamic System Alert User Configurations ---
   const [enableTimerAlerts, setEnableTimerAlerts] = useState(() => {
@@ -89,16 +99,61 @@ export default function App() {
   });
   const [lastDigestDate, setLastDigestDate] = useState(() => localStorage.getItem('pomo_last_digest_date') || '');
   const [dailyCheckInHour] = useState(9); // 9:00 AM Trigger Threshold
+const updateFocusPreference = (val) => {
+  const newMins = parseInt(val, 10) || 0;
+  setFocusLength(newMins);
+  localStorage.setItem('pomo_pref_focus_length', newMins);
+  
+  // Only push to live countdown if the timer is idle in work mode
+  if (mode === 'work' && !isActive) {
+    setMinutes(newMins);
+    setSeconds(0);
+  }
+};
 
+const updateBreakPreference = (val) => {
+  const newMins = parseInt(val, 10) || 0;
+  setBreakLength(newMins);
+  localStorage.setItem('pomo_pref_break_length', newMins);
+  
+  // Only push to live countdown if the timer is idle in break mode
+  if (mode === 'shortBreak' && !isActive) {
+    setMinutes(newMins);
+    setSeconds(0);
+  }
+};
   // 1. Data Hydration Orchestrator
-  useEffect(() => {
-    if (isGuestMode) {
-      setTasks(JSON.parse(localStorage.getItem('pomo_guest_tasks') || '[]'));
-      setCompletedTasks(JSON.parse(localStorage.getItem('pomo_guest_completed') || '[]'));
-      setBuckets(JSON.parse(localStorage.getItem('pomo_guest_buckets') || '["Project", "Firm Initiative", "Personal"]'));
-      setIsAuthenticated(true);
-      return;
-    }
+ useEffect(() => {
+  let interval = null;
+  if (isActive) {
+    interval = setInterval(() => {
+      if (seconds > 0) {
+        setSeconds(seconds - 1);
+      } else if (seconds === 0) {
+        if (minutes === 0) {
+          // 🔔 Timer completed! Handle automatic phase flipping
+          if (mode === 'work') {
+            setMode('shortBreak');
+            setMinutes(breakLength); // 🔄 UPDATED: Use your break custom length
+            setStreak(prev => prev + 1);
+            // triggerConfetti(); 
+          } else {
+            setMode('work');
+            setMinutes(focusLength); // 🔄 UPDATED: Use your focus custom length
+          }
+          setSeconds(0);
+          setIsActive(false);
+        } else {
+          setMinutes(minutes - 1);
+          setSeconds(59);
+        }
+      }
+    }, 1000);
+  } else {
+    clearInterval(interval);
+  }
+  return () => clearInterval(interval);
+}, [isActive, minutes, seconds, mode, focusLength, breakLength]); // Added dependencies
 
     if (!username || !passcode) return;
     async function hydrateProfile() {
@@ -328,7 +383,24 @@ export default function App() {
     if (clean === 'personal') return 'bg-[#2d332d] text-[#bacfbc] border-[#3b453b]';
     return 'bg-[#23242a] text-[#c4c6cf] border-[#43474e]';
   };
+// Function to switch between modes manually
+const handleModeSwitch = (newMode) => {
+  setIsActive(false);
+  setSeconds(0);
+  setMode(newMode);
+  if (newMode === 'work') {
+    setMinutes(focusLength);
+  } else {
+    setMinutes(breakLength);
+  }
+};
 
+// Standard reset function
+const resetTimer = () => {
+  setIsActive(false);
+  setSeconds(0);
+  setMinutes(mode === 'work' ? focusLength : breakLength);
+};
   // --- SUB-RENDER VIEW A: GATEWAY IDENTITY INTERFACE ---
   if (!isAuthenticated) {
     return (

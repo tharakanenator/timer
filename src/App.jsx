@@ -458,7 +458,7 @@ export default function App() {
         <div className="bg-[#1c1b1f] border border-[#2d2b30] rounded-[32px] p-6 flex flex-col gap-4 shadow-lg min-h-[480px]">
           <div>
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-sm font-semibold tracking-wider text-[#919191] uppercase">Activity Deck Queue</h2>
+              <h2 className="text-sm font-semibold tracking-wider text-[#919191] uppercase">Pending Tasks</h2>
               <button onClick={() => setShowBucketSettings(!showBucketSettings)} className="p-1.5 rounded-lg bg-[#25232a] border border-[#49454f] text-[#919191] hover:text-[#e3e3e3] transition-colors">
                 <Settings className="h-3.5 w-3.5" />
               </button>
@@ -522,11 +522,11 @@ export default function App() {
           <div className="border-t border-neutral-800/60 pt-3 mt-2">
             <div className="flex justify-between items-center mb-2">
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-semibold tracking-wider text-neutral-500 uppercase">Archived History</span>
+                <span className="text-[10px] font-semibold tracking-wider text-neutral-500 uppercase">Completed Task History</span>
                 <span className="text-[9px] px-1.5 py-0.2 bg-[#2d332d] text-[#bacfbc] border border-[#3b453b] rounded-full font-bold">{completedTasks.length} Done</span>
               </div>
               {completedTasks.length > 0 && (
-                <button onClick={handleClearHistory} className="text-[10px] text-neutral-600 hover:text-[#ffb4a2] transition-colors underline underline-offset-2">Purge Log</button>
+                <button onClick={handleClearHistory} className="text-[10px] text-neutral-600 hover:text-[#ffb4a2] transition-colors underline underline-offset-2">Delete Completed Tasks</button>
               )}
             </div>
             <div className="space-y-1.5 max-h-[110px] overflow-y-auto pr-1">
@@ -545,7 +545,7 @@ export default function App() {
               ))}
               {completedTasks.length === 0 && (
                 <div className="text-center py-3 border border-dashed border-[#232225] rounded-xl bg-[#141416]">
-                  <p className="text-[10px] text-neutral-600 italic">No historical completion records logged.</p>
+                  <p className="text-[10px] text-neutral-600 italic">No completed tasks available. Finish a task to see it here. 🤩</p>
                 </div>
               )}
             </div>
@@ -553,7 +553,7 @@ export default function App() {
 
           {/* PERSISTENT INITIALIZATION FORM FOOTER */}
           <div className="bg-[#121212] border border-[#2d2b30] rounded-2xl p-3 mt-auto space-y-2.5">
-            <input id="new-task-text" type="text" placeholder="Specify objective pipeline..." className="w-full bg-[#1c1b1f] border border-[#49454f] rounded-xl px-3 py-1.5 text-xs text-[#e3e3e3] focus:outline-none focus:border-[#aac7ff]" />
+            <input id="new-task-text" type="text" placeholder="Add new task" className="w-full bg-[#1c1b1f] border border-[#49454f] rounded-xl px-3 py-1.5 text-xs text-[#e3e3e3] focus:outline-none focus:border-[#aac7ff]" />
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <select id="new-task-bucket" className="w-full bg-[#1c1b1f] border border-[#49454f] rounded-xl px-2 py-1.5 text-[11px] text-[#e3e3e3] focus:outline-none">
@@ -577,7 +577,7 @@ export default function App() {
               }}
               className="w-full py-1.5 bg-[#aac7ff] text-[#002f66] hover:bg-[#b6c4ff] rounded-xl font-medium text-xs tracking-wide transition-all flex items-center justify-center gap-1"
             >
-              <Plus className="h-3.5 w-3.5" /> Initialize Target Card
+              <Plus className="h-3.5 w-3.5" /> Add Task
             </button>
           </div>
 

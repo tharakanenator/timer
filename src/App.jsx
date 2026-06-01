@@ -337,7 +337,7 @@ export default function App() {
         
         <div className="w-full max-w-sm bg-[#1c1b1f] border border-[#2d2b30] rounded-[28px] p-6 shadow-xl space-y-5">
           <div className="text-center">
-            <span className="text-[10px] font-bold tracking-widest text-[#aac7ff] uppercase">Workspace Gateway v4</span>
+            <span className="text-[10px] font-bold tracking-widest text-[#aac7ff] uppercase">Pomodoro Timer v4</span>
             <h1 className="text-xl font-medium text-[#e3e3e3] mt-1">{isSignUpMode ? 'Deploy Cloud Identity' : 'Authenticate Session'}</h1>
           </div>
 
@@ -368,7 +368,7 @@ export default function App() {
             <div className="flex gap-2 items-start">
               <EyeOff className="h-4 w-4 text-[#ffb4a2] mt-0.5 flex-shrink-0" />
               <p className="text-[11px] leading-relaxed text-[#c4c6cf]">
-                <strong>Temporary Session Notice:</strong> Trying without an account saves items solely to browser sandboxes. Data wipes cleanly upon session exit or cache clears.
+                <strong>Temporary Session Notice:</strong> You can use the timer and tasks without an account. However browser cache refreshes can wipe any tasks you are tracking. You can create an account after trying as a guest!
               </p>
             </div>
             <button onClick={handleGuestLogin} className="w-full py-2 bg-[#25232a] border border-[#49454f] hover:border-[#aac7ff] text-[#e3e3e3] rounded-xl font-medium text-xs transition-colors">
@@ -378,7 +378,7 @@ export default function App() {
 
           <div className="text-center pt-1">
             <button onClick={() => { setIsSignUpMode(!isSignUpMode); setAuthFeedback(''); }} className="text-xs text-[#919191] hover:text-[#aac7ff] underline underline-offset-4">
-              {isSignUpMode ? 'Already registered? Log in here' : 'Need an isolated cloud account? Create one'}
+              {isSignUpMode ? 'Already registered? Log in here' : 'Need a new account? Create new account here'}
             </button>
           </div>
         </div>

@@ -1,7 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import confetti from 'canvas-confetti';
 import { Play, Pause, RotateCcw, Plus, Trash2, Flame, Settings, User, Lock, ArrowRight } from 'lucide-react';
-
+// Footer text backlinking to my personal website, feel free to explore for more projects and writings: https://kuttiyil.net
+const ProjectFooter = () => (
+  <footer className="w-full py-6 mt-auto text-center border-t border-neutral-800/40">
+    <p className="text-xs tracking-wide text-neutral-500 font-light select-none">
+      A handcrafted project by{" "}
+      <a 
+        href="https://kuttiyil.net" 
+        target="_blank" 
+        rel="noopener noreferrer"
+        className="font-medium text-neutral-400 hover:text-red-400 transition-colors duration-200 underline underline-offset-4 decoration-neutral-700 hover:decoration-red-400/50"
+      >
+        Thomas Kuttiyil Oommen
+      </a>
+    </p>
+  </footer>
+);
 export default function App() {
   // --- Auth Session State ---
   const [username, setUsername] = useState(() => localStorage.getItem('pomo_user_session') || '');
@@ -255,6 +270,7 @@ export default function App() {
             </button>
           </div>
         </div>
+        <ProjectFooter />
       </div>
     );
   }
@@ -408,6 +424,7 @@ export default function App() {
 
         </div>
       </div>
+      <ProjectFooter />
     </div>
   );
 }

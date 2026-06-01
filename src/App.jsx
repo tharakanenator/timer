@@ -60,7 +60,7 @@ export default function App() {
   // --- User Entry Form States ---
   const [isSignUpMode, setIsSignUpMode] = useState(false);
   const [inputUser, setInputUser] = useState('');
-  const [inputPass, setInputPass} = useState('');
+  const [inputPass, setInputPass] = useState('');
   const [authFeedback, setAuthFeedback] = useState('');
 
   // --- Workspace Activity Core Decks ---

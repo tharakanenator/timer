@@ -401,7 +401,7 @@ export default function App() {
           <div className="bg-[#2d1f1c] border border-[#4d2d26] rounded-xl px-3 py-1.5 flex items-center gap-2 animate-fade-in">
             <CloudLightning className="h-3.5 w-3.5 text-[#ffb4a2] animate-bounce" />
             <span className="text-[11px] text-[#ffb4a2]">
-              Guest Instance. <button onClick={() => { setIsAuthenticated(false); setIsSignUpMode(true); }} className="underline font-bold hover:text-white">Secure Cloud Account</button> to preserve your tasks permanently.
+              Guest Instance. <button onClick={() => { setIsAuthenticated(false); setIsSignUpMode(true); }} className="underline font-bold hover:text-white">Create Account</button> to save your tasks permanently.
             </span>
           </div>
         ) : (
@@ -412,7 +412,7 @@ export default function App() {
         )}
         
         <button onClick={handleLogOut} className="px-3 py-1 bg-[#25232a] border border-[#49454f] text-[#919191] hover:text-[#ffb4a2] rounded-lg text-[11px] font-medium transition-colors">
-          {isGuestMode ? 'Exit Session' : 'Lock Console'}
+          {isGuestMode ? 'Exit Session' : 'Logout'}
         </button>
       </div>
 
@@ -431,7 +431,7 @@ export default function App() {
                 </div>
               </div>
             ) : (
-              <span className="text-xs text-[#79747e] italic">Select an objective card to activate focus layout</span>
+              <span className="text-xs text-[#79747e] italic">Select a task card to activate focus layout</span>
             )}
           </div>
 

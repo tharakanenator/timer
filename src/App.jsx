@@ -60,7 +60,7 @@ export default function App() {
   // --- User Entry Form States ---
   const [isSignUpMode, setIsSignUpMode] = useState(false);
   const [inputUser, setInputUser] = useState('');
-  const [inputPass, setInputPass] = useState('');
+  const [inputPass, setInputPass} = useState('');
   const [authFeedback, setAuthFeedback] = useState('');
 
   // --- Workspace Activity Core Decks ---
@@ -70,23 +70,23 @@ export default function App() {
   const [buckets, setBuckets] = useState(['Project', 'Firm Initiative', 'Personal']);
   const [showBucketSettings, setShowBucketSettings] = useState(false);
   const [newBucketName, setNewBucketName] = useState('');
-// ➕ ADD YOUR NEW TIMER CUSTOMIZATION STATES HERE:
+
+  // --- User Custom Timer Length Parameters ---
   const [focusLength, setFocusLength] = useState(() => {
     const saved = localStorage.getItem('pomo_pref_focus_length');
-    return saved ? parseInt(saved, 10) : 25; // Defaults to 25 mins
+    return saved ? parseInt(saved, 10) : 25;
   });
   const [breakLength, setBreakLength] = useState(() => {
     const saved = localStorage.getItem('pomo_pref_break_length');
-    return saved ? parseInt(saved, 10) : 5; // Defaults to 5 mins
+    return saved ? parseInt(saved, 10) : 5;
   });
+
   // --- Real-time Countdown Core Drivers ---
   const [minutes, setMinutes] = useState(focusLength);
   const [seconds, setSeconds] = useState(0);
   const [isActive, setIsActive] = useState(false);
-  const [mode, setMode] = useState('work'); 
+  const [mode, setMode] = useState('work'); // 'work' or 'shortBreak'
   const [streak, setStreak] = useState(0);
-
-
 
   // --- Dynamic System Alert User Configurations ---
   const [enableTimerAlerts, setEnableTimerAlerts] = useState(() => {
@@ -98,31 +98,30 @@ export default function App() {
     return saved !== null ? JSON.parse(saved) : true;
   });
   const [lastDigestDate, setLastDigestDate] = useState(() => localStorage.getItem('pomo_last_digest_date') || '');
-  const [dailyCheckInHour] = useState(9); // 9:00 AM Trigger Threshold
-const updateFocusPreference = (val) => {
-  const newMins = parseInt(val, 10) || 0;
-  setFocusLength(newMins);
-  localStorage.setItem('pomo_pref_focus_length', newMins);
-  
-  // Only push to live countdown if the timer is idle in work mode
-  if (mode === 'work' && !isActive) {
-    setMinutes(newMins);
-    setSeconds(0);
-  }
-};
+  const [dailyCheckInHour] = useState(9); 
 
-const updateBreakPreference = (val) => {
-  const newMins = parseInt(val, 10) || 0;
-  setBreakLength(newMins);
-  localStorage.setItem('pomo_pref_break_length', newMins);
-  
-  // Only push to live countdown if the timer is idle in break mode
-  if (mode === 'shortBreak' && !isActive) {
-    setMinutes(newMins);
-    setSeconds(0);
-  }
-};
- // 1. Data Hydration Orchestrator
+  // --- Preference Synchronization Pipeline Drivers ---
+  const updateFocusPreference = (val) => {
+    const newMins = parseInt(val, 10) || 0;
+    setFocusLength(newMins);
+    localStorage.setItem('pomo_pref_focus_length', newMins);
+    if (mode === 'work' && !isActive) {
+      setMinutes(newMins);
+      setSeconds(0);
+    }
+  };
+
+  const updateBreakPreference = (val) => {
+    const newMins = parseInt(val, 10) || 0;
+    setBreakLength(newMins);
+    localStorage.setItem('pomo_pref_break_length', newMins);
+    if (mode === 'shortBreak' && !isActive) {
+      setMinutes(newMins);
+      setSeconds(0);
+    }
+  };
+
+  // 1. Data Hydration Orchestrator
   useEffect(() => {
     if (isGuestMode) {
       setTasks(JSON.parse(localStorage.getItem('pomo_guest_tasks') || '[]'));
@@ -154,8 +153,7 @@ const updateBreakPreference = (val) => {
     hydrateProfile();
   }, [username, passcode, isGuestMode]);
 
-
-  // 2. Real-Time Focus Clock Interval Routine
+  // 2. Real-Time Focus Clock Interval Routine (Unified & Deduplicated)
   useEffect(() => {
     let interval = null;
     if (isActive) {
@@ -164,18 +162,20 @@ const updateBreakPreference = (val) => {
           setSeconds(seconds - 1);
         } else if (seconds === 0) {
           if (minutes === 0) {
-            // 🔔 Timer completed! Handle automatic phase flipping
+            setIsActive(false);
+            if (typeof confetti === 'function') confetti({ particleCount: 150, spread: 80 });
+
             if (mode === 'work') {
+              if (enableTimerAlerts) dispatchSystemAlert("Interval Complete! 🎯", "Brilliant execution. Take a well-earned break!");
+              setStreak(prev => prev + 1);
               setMode('shortBreak');
               setMinutes(breakLength); 
-              setStreak(prev => prev + 1);
-              if (typeof confetti === 'function') confetti({ particleCount: 150, spread: 80 });
             } else {
+              if (enableTimerAlerts) dispatchSystemAlert("Break Over! 🚀", "Time to look back into active tracking loops.");
               setMode('work');
               setMinutes(focusLength); 
             }
             setSeconds(0);
-            setIsActive(false);
           } else {
             setMinutes(minutes - 1);
             setSeconds(59);
@@ -186,9 +186,9 @@ const updateBreakPreference = (val) => {
       clearInterval(interval);
     }
     return () => clearInterval(interval);
-  }, [isActive, minutes, seconds, mode, focusLength, breakLength]);
+  }, [isActive, minutes, seconds, mode, enableTimerAlerts, focusLength, breakLength]);
 
-  // 2. Hybrid Data Synchronization Engine
+  // 3. Hybrid Data Synchronization Engine
   const syncToStorage = async (updatedTasks, updatedCompleted, updatedBuckets) => {
     const currentBuckets = updatedBuckets || buckets;
     if (isGuestMode) {
@@ -213,7 +213,7 @@ const updateBreakPreference = (val) => {
     }
   };
 
-  // 3. Secure Handshake and Guest Account Upgrade Pipeline
+  // 4. Secure Handshake Framework
   const handleAuthSubmit = async (e) => {
     e.preventDefault();
     setAuthFeedback('');
@@ -232,7 +232,6 @@ const updateBreakPreference = (val) => {
 
       if (res.status === 200) {
         if (isSignUpMode) {
-          // GUEST CONVERSION TRACK: Port client arrays cleanly into Upstash cloud profile
           if (isGuestMode) {
             await fetch('/api/sync', {
               method: 'POST',
@@ -292,39 +291,6 @@ const updateBreakPreference = (val) => {
     setActiveTaskId(null);
   };
 
-  // 4. Real-Time Focus Clock Interval Routine
-  useEffect(() => {
-    let interval = null;
-    if (isActive) {
-      interval = setInterval(() => {
-        if (seconds > 0) setSeconds(seconds - 1);
-        else if (seconds === 0) {
-          if (minutes === 0) {
-            setIsActive(false);
-            confetti({ particleCount: 150, spread: 80 });
-            if (mode === 'work') {
-              if (enableTimerAlerts) dispatchSystemAlert("Interval Complete! 🎯", "Brilliant execution. Take a well-earned break!");
-              setStreak(prev => prev + 1);
-              setMode('shortBreak');
-              setMinutes(5);
-            } else {
-              if (enableTimerAlerts) dispatchSystemAlert("Break Over! 🚀", "Time to look back into active tracking loops.");
-              setMode('work');
-              setMinutes(25);
-            }
-            setSeconds(0);
-          } else {
-            setMinutes(minutes - 1);
-            setSeconds(59);
-          }
-        }
-      }, 1000);
-    } else {
-      clearInterval(interval);
-    }
-    return () => clearInterval(interval);
-  }, [isActive, minutes, seconds, mode, enableTimerAlerts]);
-
   // 5. Daily Agenda Visibility Monitor Rule
   useEffect(() => {
     if (!isAuthenticated || tasks.length === 0) return;
@@ -364,7 +330,7 @@ const updateBreakPreference = (val) => {
     setTasks(updatedTasks);
     setCompletedTasks(updatedCompleted);
     if (activeTaskId === id) setActiveTaskId(null);
-    confetti({ particleCount: 60, spread: 45 });
+    if (typeof confetti === 'function') confetti({ particleCount: 60, spread: 45 });
     syncToStorage(updatedTasks, updatedCompleted, buckets);
   };
 
@@ -394,24 +360,21 @@ const updateBreakPreference = (val) => {
     if (clean === 'personal') return 'bg-[#2d332d] text-[#bacfbc] border-[#3b453b]';
     return 'bg-[#23242a] text-[#c4c6cf] border-[#43474e]';
   };
-// Function to switch between modes manually
-const handleModeSwitch = (newMode) => {
-  setIsActive(false);
-  setSeconds(0);
-  setMode(newMode);
-  if (newMode === 'work') {
-    setMinutes(focusLength);
-  } else {
-    setMinutes(breakLength);
-  }
-};
 
-// Standard reset function
-const resetTimer = () => {
-  setIsActive(false);
-  setSeconds(0);
-  setMinutes(mode === 'work' ? focusLength : breakLength);
-};
+  // 7. Core Interactive Switching Engines
+  const handleModeSwitch = (newMode) => {
+    setIsActive(false);
+    setSeconds(0);
+    setMode(newMode);
+    setMinutes(newMode === 'work' ? focusLength : breakLength);
+  };
+
+  const resetTimer = () => {
+    setIsActive(false);
+    setSeconds(0);
+    setMinutes(mode === 'work' ? focusLength : breakLength);
+  };
+
   // --- SUB-RENDER VIEW A: GATEWAY IDENTITY INTERFACE ---
   if (!isAuthenticated) {
     return (
@@ -504,7 +467,24 @@ const resetTimer = () => {
         
         {/* TIMER CONTAINER CARD */}
         <div className="bg-[#1c1b1f] border border-[#2d2b30] rounded-[32px] p-8 flex flex-col items-center shadow-lg relative">
-          <div className="w-full min-h-[54px] flex flex-col items-center justify-center mb-6 px-4 py-2 bg-[#121212] rounded-2xl border border-[#2d2b30] border-dashed">
+          
+          {/* Mode Manual Toggle Header */}
+          <div className="flex w-full max-w-[240px] bg-[#121212] border border-[#2d2b30] p-1 rounded-xl mb-4 text-xs font-medium">
+            <button 
+              onClick={() => handleModeSwitch('work')}
+              className={`flex-1 py-1.5 rounded-lg transition-all ${mode === 'work' ? 'bg-[#aac7ff] text-[#002f66] font-semibold' : 'text-[#919191] hover:text-[#e3e3e3]'}`}
+            >
+              Focus Block
+            </button>
+            <button 
+              onClick={() => handleModeSwitch('shortBreak')}
+              className={`flex-1 py-1.5 rounded-lg transition-all ${mode === 'shortBreak' ? 'bg-[#aac7ff] text-[#002f66] font-semibold' : 'text-[#919191] hover:text-[#e3e3e3]'}`}
+            >
+              Break
+            </button>
+          </div>
+
+          <div className="w-full min-h-[54px] flex flex-col items-center justify-center mb-4 px-4 py-2 bg-[#121212] rounded-2xl border border-[#2d2b30] border-dashed">
             {currentActiveTask ? (
               <div className="text-center w-full">
                 <span className="text-[9px] uppercase tracking-widest text-[#919191] block mb-1 font-semibold">Active Focus Target</span>
@@ -518,7 +498,7 @@ const resetTimer = () => {
             )}
           </div>
 
-          <div className="text-7xl font-light tracking-tighter text-[#e3e3e3] my-4 tabular-nums select-none">
+          <div className="text-7xl font-light tracking-tighter text-[#e3e3e3] my-2 tabular-nums select-none">
             {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
           </div>
 
@@ -531,7 +511,7 @@ const resetTimer = () => {
             <button onClick={() => setIsActive(!isActive)} className="h-14 w-14 rounded-full bg-[#aac7ff] text-[#002f66] flex items-center justify-center shadow-md hover:scale-105 transition-transform">
               {isActive ? <Pause className="h-6 w-6" /> : <Play className="h-6 w-6 fill-current" />}
             </button>
-            <button onClick={() => { setIsActive(false); setMinutes(mode === 'work' ? 25 : 5); setSeconds(0); }} className="h-14 w-14 rounded-full bg-[#25232a] border border-[#49454f] text-[#e3e3e3] flex items-center justify-center hover:bg-[#2d2b30]">
+            <button onClick={resetTimer} className="h-14 w-14 rounded-full bg-[#25232a] border border-[#49454f] text-[#e3e3e3] flex items-center justify-center hover:bg-[#2d2b30]">
               <RotateCcw className="h-5 w-5" />
             </button>
           </div>
@@ -550,6 +530,18 @@ const resetTimer = () => {
             {/* EXPANDABLE CONSOLE PARAMETERS DASHBOARD */}
             {showBucketSettings && (
               <div className="mb-4 p-4 bg-[#121212] border border-[#49454f] rounded-xl space-y-4 animate-fade-in">
+                {/* ⏱️ Custom Length Control Layout Module */}
+                <div className="space-y-2 border-b border-neutral-800/60 pb-3 grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-semibold text-[#aac7ff] uppercase tracking-wider mb-1">Focus (mins)</label>
+                    <input type="number" min="1" max="180" value={focusLength} onChange={(e) => updateFocusPreference(e.target.value)} className="w-full px-3 py-1.5 border border-[#49454f] rounded-lg bg-[#1c1b1f] text-xs text-white focus:outline-none focus:border-[#aac7ff]" />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-semibold text-[#aac7ff] uppercase tracking-wider mb-1">Break (mins)</label>
+                    <input type="number" min="1" max="60" value={breakLength} onChange={(e) => updateBreakPreference(e.target.value)} className="w-full px-3 py-1.5 border border-[#49454f] rounded-lg bg-[#1c1b1f] text-xs text-white focus:outline-none focus:border-[#aac7ff]" />
+                  </div>
+                </div>
+
                 <div className="space-y-2 border-b border-neutral-800/60 pb-3">
                   <span className="text-[10px] font-semibold text-[#aac7ff] uppercase block tracking-wider">System Notification Controls</span>
                   <label className="flex items-center justify-between text-xs text-[#c4c6cf] cursor-pointer select-none py-0.5">
@@ -658,15 +650,14 @@ const resetTimer = () => {
                   if (dateEl) dateEl.value = '';
                 }
               }}
-              className="w-full py-1.5 bg-[#aac7ff] text-[#002f66] hover:bg-[#b6c4ff] rounded-xl font-medium text-xs tracking-wide transition-all flex items-center justify-center gap-1"
+              className="w-full py-1.5 bg-[#aac7ff] text-[#002f66] hover:bg-[#b6c4ff] rounded-xl font-medium text-xs tracking-wide transition-all"
             >
-              <Plus className="h-3.5 w-3.5" /> Add Task
+              Add Task Blueprint
             </button>
           </div>
 
         </div>
       </div>
-      
       <ProjectFooter />
     </div>
   );

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import confetti from 'canvas-commetti'; // Ensure canvas-confetti is in your package.json
+import confetti from 'canvas-confetti'; // Ensure canvas-confetti is in your package.json
 import { 
   Play, Pause, RotateCcw, Plus, Settings, User, 
   Lock, ArrowRight, EyeOff, CloudLightning, Flame 

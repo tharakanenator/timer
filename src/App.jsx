@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import confetti from 'canvas-confetti'; // Note: Ensure canvas-confetti is installed if using this
+import React, { useState, useEffect, useRef } from 'react';
+import confetti from 'canvas-confetti';
 import { 
   Plus, Settings, User, Lock, ArrowRight, EyeOff, 
-  Trash2, CheckCircle, ArrowUpDown, ShieldAlert, BarChart2, List
+  Trash2, CheckCircle, ArrowUpDown, ShieldAlert, BarChart2, List, Play, Pause, RotateCcw, Sliders
 } from 'lucide-react';
 
-// 1. Subtle Personal Branding Link Component
+// Subtle Personal Branding Link Component
 const ProjectFooter = () => {
   return (
     <footer className="w-full py-6 mt-auto text-center border-t border-neutral-800/40">
@@ -26,9 +26,17 @@ const ProjectFooter = () => {
 
 const PRIORITY_WEIGHTS = { High: 3, Medium: 2, Low: 1 };
 
-// 2. Main Central Application Component Controller
 export default function App() {
-  // --- All Component States ---
+  // --- Configurable Pomodoro Timer States ---
+  const [focusLength, setFocusLength] = useState(25); // in minutes
+  const [breakLength, setBreakLength] = useState(5);  // in minutes
+  const [timerMode, setTimerMode] = useState('Focus'); // 'Focus' or 'Break'
+  const [timeLeft, setTimeLeft] = useState(25 * 60);
+  const [isTimerRunning, setIsTimerRunning] = useState(false);
+  const [showTimerConfig, setShowTimerConfig] = useState(false);
+  const timerRef = useRef(null);
+
+  // --- Authentication & Session States ---
   const [username, setUsername] = useState(() => localStorage.getItem('pomo_user_session') || '');
   const [passcode, setPasscode] = useState(() => localStorage.getItem('pomo_token_session') || '');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -39,22 +47,60 @@ export default function App() {
   const [inputPass, setInputPass] = useState('');
   const [authFeedback, setAuthFeedback] = useState('');
 
+  // --- Active Workspace Core Decks ---
   const [tasks, setTasks] = useState([]);
   const [completedTasks, setCompletedTasks] = useState([]);
   const [buckets, setBuckets] = useState(['Project', 'Firm Initiative', 'Personal']);
   const [showBucketSettings, setShowBucketSettings] = useState(false);
   const [newBucketName, setNewBucketName] = useState('');
 
+  // --- Task Input Form States ---
   const [taskText, setTaskText] = useState('');
   const [taskBucket, setTaskBucket] = useState('Project');
   const [taskPriority, setTaskPriority] = useState('Medium');
   const [taskDueDate, setTaskDueDate] = useState('Today');
 
+  // --- Navigation & Filter States ---
   const [activeTab, setActiveTab] = useState('tasks');
   const [sortBy, setSortBy] = useState('priority');
   const [statsCategoryFilter, setStatsCategoryFilter] = useState('All');
 
-  // --- Effects & Synchronizers ---
+  // --- Sync Timer Length Display when Config Changes ---
+  useEffect(() => {
+    if (!isTimerRunning) {
+      setTimeLeft(timerMode === 'Focus' ? focusLength * 60 : breakLength * 60);
+    }
+  }, [focusLength, breakLength, timerMode]);
+
+  // --- Timer Tick Controller ---
+  useEffect(() => {
+    if (isTimerRunning) {
+      timerRef.current = setInterval(() => {
+        setTimeLeft((prev) => {
+          if (prev <= 1) {
+            clearInterval(timerRef.current);
+            setIsTimerRunning(false);
+            
+            // Fire celebration confetti effects
+            if (typeof confetti === 'function') {
+              confetti({ particleCount: 80, spread: 60, colors: timerMode === 'Focus' ? ['#aac7ff', '#bacfbc'] : ['#ffe082', '#ffb4a2'] });
+            }
+            
+            // Auto-switch mode cycle
+            const nextMode = timerMode === 'Focus' ? 'Break' : 'Focus';
+            setTimerMode(nextMode);
+            return nextMode === 'Focus' ? focusLength * 60 : breakLength * 60;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } else {
+      clearInterval(timerRef.current);
+    }
+    return () => clearInterval(timerRef.current);
+  }, [isTimerRunning, timerMode, focusLength, breakLength]);
+
+  // Data Hydration Orchestrator
   useEffect(() => {
     if (isGuestMode) {
       setTasks(JSON.parse(localStorage.getItem('pomo_guest_tasks') || '[]'));
@@ -110,7 +156,7 @@ export default function App() {
     }
   };
 
-  // --- Actions & Handlers ---
+  // --- Authentication Handshaking ---
   const handleAuthSubmit = async (e) => {
     e.preventDefault();
     setAuthFeedback('');
@@ -185,8 +231,12 @@ export default function App() {
     setCompletedTasks([]);
     setBuckets(['Project', 'Firm Initiative', 'Personal']);
     setActiveTab('tasks');
+    setIsTimerRunning(false);
+    setTimerMode('Focus');
+    setTimeLeft(25 * 60);
   };
 
+  // --- Task Mutations ---
   const handleAddTask = (e) => {
     e.preventDefault();
     if (!taskText.trim()) return;
@@ -252,7 +302,7 @@ export default function App() {
     });
   };
 
-  // --- Statistics Processors ---
+  // --- Statistics Computing Engine ---
   const generateDailyStatsData = () => {
     const filteredCompletions = statsCategoryFilter === 'All' 
       ? completedTasks 
@@ -293,7 +343,13 @@ export default function App() {
     return counts;
   };
 
-  // --- CSS Class Styling Mappers ---
+  // --- Formatting Helpers ---
+  const formatTime = (secs) => {
+    const mins = Math.floor(secs / 60);
+    const remainder = secs % 60;
+    return `${mins.toString().padStart(2, '0')}:${remainder.toString().padStart(2, '0')}`;
+  };
+
   const getBucketStyle = (bucket) => {
     const clean = bucket?.toLowerCase() || '';
     if (clean === 'project') return 'bg-[#212433] text-[#aac7ff] border-[#30374d]';
@@ -311,14 +367,14 @@ export default function App() {
   const { chartData, maxTotal } = generateDailyStatsData();
   const lifetimePriorities = getLifetimePriorityStats();
 
-  // --- INTERFACE CONDITION A: GATEWAY SIGN-IN ---
+  // --- INTERFACE VIEW A: GATEWAY SIGN-IN ---
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-[#121212] flex flex-col items-center justify-between p-4">
         <div className="flex-grow" />
         <div className="w-full max-w-sm bg-[#1c1b1f] border border-[#2d2b30] rounded-[28px] p-6 shadow-xl space-y-5">
           <div className="text-center">
-            <span className="text-[10px] font-bold tracking-widest text-[#aac7ff] uppercase">Pomodoro Timer & Task Manager v5</span>
+            <span className="text-[10px] font-bold tracking-widest text-[#aac7ff] uppercase">Task Manager v5</span>
             <h1 className="text-xl font-medium text-[#e3e3e3] mt-1">{isSignUpMode ? 'Create Account' : 'Sign In'}</h1>
           </div>
 
@@ -363,16 +419,18 @@ export default function App() {
     );
   }
 
-  // --- INTERFACE CONDITION B: PRODUCTION MAIN TERMINAL ---
+  // --- INTERFACE VIEW B: MAIN WORKSPACE ---
   return (
     <div className="min-h-screen bg-[#121212] text-[#e3e3e3] flex flex-col items-center py-10 px-4">
       
+      {/* Session Header Status */}
       <div className="w-full max-w-2xl flex justify-between items-center mb-6 px-2">
         <div className="flex items-center gap-2">
           <div className="h-2 w-2 bg-[#bacfbc] rounded-full" />
           <span className="text-xs text-[#919191]">Logged in as: <strong className="text-[#e3e3e3]">{isGuestMode ? 'Guest' : username}</strong></span>
         </div>
         
+        {/* Navigation Tabs */}
         <div className="flex bg-[#1c1b1f] border border-[#2d2b30] rounded-xl p-1 text-xs">
           <button 
             onClick={() => setActiveTab('tasks')} 
@@ -393,8 +451,95 @@ export default function App() {
         </button>
       </div>
 
+      {/* TAB 1: CORE TASKS & CONFIGURABLE TIMER */}
       {activeTab === 'tasks' && (
         <div className="w-full max-w-2xl bg-[#1c1b1f] border border-[#2d2b30] rounded-[32px] p-6 flex flex-col gap-5 shadow-lg">
+          
+          {/* Integrated Configurable Pomodoro Module */}
+          <div className="bg-[#121212] border border-[#2d2b30] rounded-2xl p-4 space-y-3">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                {/* Dynamic Counter Border based on Session State */}
+                <div className={`h-14 w-14 rounded-full border-2 border-dashed flex items-center justify-center relative select-none transition-colors ${timerMode === 'Focus' ? 'border-[#aac7ff]/50' : 'border-[#ffe082]/50'}`}>
+                  <span className={`text-sm font-bold font-mono tracking-wide ${timerMode === 'Focus' ? 'text-[#aac7ff]' : 'text-[#ffe082]'}`}>
+                    {formatTime(timeLeft)}
+                  </span>
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold tracking-wider uppercase border ${timerMode === 'Focus' ? 'bg-[#212433] text-[#aac7ff] border-[#30374d]' : 'bg-[#332a15] text-[#ffe082] border-[#4f4007]'}`}>
+                      {timerMode} Mode
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-neutral-500 mt-1">
+                    {timerMode === 'Focus' ? `Focusing for ${focusLength}m` : `Resting for ${breakLength}m`}. Click switch button to flip manual.
+                  </p>
+                </div>
+              </div>
+
+              {/* Action Controls */}
+              <div className="flex items-center gap-1.5">
+                <button 
+                  onClick={() => setTimerMode(timerMode === 'Focus' ? 'Break' : 'Focus')}
+                  className="p-2.5 bg-[#1c1b1f] border border-[#2d2b30] hover:border-neutral-500 text-neutral-400 hover:text-white rounded-xl text-[11px] font-medium transition-colors"
+                  title="Toggle Mode Manual"
+                >
+                  Switch Mode
+                </button>
+                <button 
+                  onClick={() => setIsTimerRunning(!isTimerRunning)}
+                  className={`p-2.5 rounded-xl text-xs font-medium transition-all flex items-center gap-1.5 ${isTimerRunning ? 'bg-[#3d1d1d] text-[#ffb4ab] border border-[#601414]' : 'bg-[#212433] text-[#aac7ff] border border-[#30374d] hover:bg-[#2a3047]'}`}
+                >
+                  {isTimerRunning ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
+                  {isTimerRunning ? 'Pause' : 'Start'}
+                </button>
+                <button 
+                  onClick={() => { setIsTimerRunning(false); setTimeLeft(timerMode === 'Focus' ? focusLength * 60 : breakLength * 60); }}
+                  className="p-2.5 bg-[#25232a] border border-[#49454f] text-neutral-400 hover:text-white rounded-xl transition-colors"
+                  title="Reset Timer"
+                >
+                  <RotateCcw className="h-3.5 w-3.5" />
+                </button>
+                <button 
+                  onClick={() => setShowTimerConfig(!showTimerConfig)} 
+                  className={`p-2.5 rounded-xl border transition-colors ${showTimerConfig ? 'bg-[#aac7ff] text-[#002f66] border-[#aac7ff]' : 'bg-[#25232a] border-[#49454f] text-neutral-400 hover:text-white'}`}
+                  title="Configure Intervals"
+                >
+                  <Sliders className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Configurable Multi-Interval Settings Panel */}
+            {showTimerConfig && (
+              <div className="p-3 bg-[#1c1b1f] border border-[#2d2b30] rounded-xl grid grid-cols-2 gap-4 text-xs animate-fade-in">
+                <div className="space-y-1.5">
+                  <label className="text-neutral-400 font-medium block">Focus Duration (Minutes):</label>
+                  <input 
+                    type="number" 
+                    min="1" 
+                    max="180" 
+                    value={focusLength} 
+                    onChange={(e) => setFocusLength(Math.max(1, parseInt(e.target.value) || 1))} 
+                    className="w-full bg-[#121212] border border-[#49454f] rounded-lg px-2.5 py-1.5 text-xs text-[#e3e3e3] focus:outline-none focus:border-[#aac7ff]" 
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-neutral-400 font-medium block">Break Duration (Minutes):</label>
+                  <input 
+                    type="number" 
+                    min="1" 
+                    max="60" 
+                    value={breakLength} 
+                    onChange={(e) => setBreakLength(Math.max(1, parseInt(e.target.value) || 1))} 
+                    className="w-full bg-[#121212] border border-[#49454f] rounded-lg px-2.5 py-1.5 text-xs text-[#e3e3e3] focus:outline-none focus:border-[#aac7ff]" 
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Active Tasks Panel */}
           <div>
             <div className="flex justify-between items-center mb-4">
               <div className="flex items-center gap-3">
@@ -427,7 +572,7 @@ export default function App() {
               <div className="mb-4 p-4 bg-[#121212] border border-[#2d2b30] rounded-2xl space-y-3">
                 <span className="text-[10px] font-semibold text-[#aac7ff] uppercase block tracking-wider">Manage Categories</span>
                 <div className="flex flex-wrap gap-1.5 py-0.5">
-                  {buckets.map(b => (
+                  {buckets.map((b) => (
                     <div key={b} className="flex items-center gap-1 px-2.5 py-0.5 bg-[#1c1b1f] border border-[#2d2b30] rounded-full text-[10px]">
                       <span>{b}</span>
                       <button onClick={() => handleRemoveBucket(b)} className="text-[#ffb4a2] hover:text-[#ff8f73] font-bold ml-1.5">×</button>
@@ -441,7 +586,8 @@ export default function App() {
               </div>
             )}
 
-            <div className="space-y-2 max-h-[290px] overflow-y-auto pr-1">
+            {/* Active Core Streams */}
+            <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
               {getSortedTasks().map((task) => (
                 <div key={task.id} className="p-3.5 bg-[#121212] border border-[#2d2b30] rounded-xl flex items-center justify-between gap-4 group hover:border-[#43474e] transition-all">
                   <div className="flex flex-col min-w-0 flex-1 gap-2">
@@ -470,6 +616,7 @@ export default function App() {
             </div>
           </div>
 
+          {/* History Panel */}
           <div className="border-t border-neutral-800/60 pt-4">
             <div className="flex justify-between items-center mb-3">
               <div className="flex items-center gap-2">
@@ -483,7 +630,7 @@ export default function App() {
               )}
             </div>
             
-            <div className="space-y-1.5 max-h-[110px] overflow-y-auto pr-1">
+            <div className="space-y-1.5 max-h-[100px] overflow-y-auto pr-1">
               {completedTasks.map((task, idx) => (
                 <div key={task.id || idx} className="p-2.5 bg-[#141416] border border-[#232225] rounded-xl flex items-center justify-between opacity-40 hover:opacity-80 transition-opacity">
                   <div className="flex flex-col min-w-0 flex-1">
@@ -505,6 +652,7 @@ export default function App() {
             </div>
           </div>
 
+          {/* Addition Entry Form */}
           <form onSubmit={handleAddTask} className="bg-[#121212] border border-[#2d2b30] rounded-2xl p-3.5 mt-1 space-y-3">
             <input 
               type="text" 
@@ -519,7 +667,7 @@ export default function App() {
                 <div className="flex items-center gap-1.5">
                   <span className="text-[10px] text-[#919191] font-medium">Category:</span>
                   <select value={taskBucket} onChange={(e) => setTaskBucket(e.target.value)} className="bg-[#1c1b1f] border border-[#49454f] text-[#e3e3e3] text-[11px] rounded-lg px-2 py-1 focus:outline-none focus:border-[#aac7ff] cursor-pointer">
-                    {buckets.map(b => (
+                    {buckets.map((b) => (
                       <option key={b} value={b}>{b}</option>
                     ))}
                   </select>
@@ -553,6 +701,7 @@ export default function App() {
         </div>
       )}
 
+      {/* TAB 2: INTERACTIVE METRICS */}
       {activeTab === 'statistics' && (
         <div className="w-full max-w-2xl bg-[#1c1b1f] border border-[#2d2b30] rounded-[32px] p-6 flex flex-col gap-6 shadow-lg animate-fade-in">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-neutral-800/60 pb-4">
@@ -569,7 +718,7 @@ export default function App() {
                 className="bg-[#121212] border border-[#49454f] text-[#e3e3e3] text-xs rounded-xl px-3 py-1.5 focus:outline-none focus:border-[#aac7ff] cursor-pointer"
               >
                 <option value="All">All Categories</option>
-                {buckets.map(b => (
+                {buckets.map((b) => (
                   <option key={b} value={b}>{b}</option>
                 ))}
               </select>

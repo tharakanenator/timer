@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import confetti from 'canvas-commetti'; // Note: Ensure canvas-confetti is installed if using this
+import confetti from 'canvas-confetti'; // Note: Ensure canvas-confetti is installed if using this
 import { 
   Plus, Settings, User, Lock, ArrowRight, EyeOff, 
   Trash2, CheckCircle, ArrowUpDown, ShieldAlert, BarChart2, List

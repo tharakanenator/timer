@@ -451,68 +451,67 @@ export default function App() {
         </button>
       </div>
 
-      {/* TAB 1: CORE TASKS & CONFIGURABLE TIMER */}
+      {/* TAB 1: CORE TASKS & RESTORED V3 POMODORO TIMER */}
       {activeTab === 'tasks' && (
         <div className="w-full max-w-2xl bg-[#1c1b1f] border border-[#2d2b30] rounded-[32px] p-6 flex flex-col gap-5 shadow-lg">
           
-          {/* Integrated Configurable Pomodoro Module */}
-          <div className="bg-[#121212] border border-[#2d2b30] rounded-2xl p-4 space-y-3">
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
-                {/* Dynamic Counter Border based on Session State */}
-                <div className={`h-14 w-14 rounded-full border-2 border-dashed flex items-center justify-center relative select-none transition-colors ${timerMode === 'Focus' ? 'border-[#aac7ff]/50' : 'border-[#ffe082]/50'}`}>
-                  <span className={`text-sm font-bold font-mono tracking-wide ${timerMode === 'Focus' ? 'text-[#aac7ff]' : 'text-[#ffe082]'}`}>
-                    {formatTime(timeLeft)}
-                  </span>
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold tracking-wider uppercase border ${timerMode === 'Focus' ? 'bg-[#212433] text-[#aac7ff] border-[#30374d]' : 'bg-[#332a15] text-[#ffe082] border-[#4f4007]'}`}>
-                      {timerMode} Mode
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-neutral-500 mt-1">
-                    {timerMode === 'Focus' ? `Focusing for ${focusLength}m` : `Resting for ${breakLength}m`}. Click switch button to flip manual.
-                  </p>
-                </div>
+          {/* Restored V3 Dedicated Pomodoro Dashboard Module */}
+          <div className="bg-[#121212] border border-[#2d2b30] rounded-2xl p-6 flex flex-col items-center justify-center text-center space-y-4">
+            
+            {/* V3 High-Contrast Large Counter */}
+            <div className="space-y-1 select-none">
+              <h1 className={`text-5xl font-bold font-mono tracking-wider ${timerMode === 'Focus' ? 'text-[#aac7ff]' : 'text-[#ffe082]'}`}>
+                {formatTime(timeLeft)}
+              </h1>
+              <div className="flex justify-center pt-1">
+                <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-bold tracking-widest uppercase border ${timerMode === 'Focus' ? 'bg-[#212433] text-[#aac7ff] border-[#30374d]' : 'bg-[#332a15] text-[#ffe082] border-[#4f4007]'}`}>
+                  {timerMode} Mode
+                </span>
               </div>
+            </div>
 
-              {/* Action Controls */}
-              <div className="flex items-center gap-1.5">
-                <button 
-                  onClick={() => setTimerMode(timerMode === 'Focus' ? 'Break' : 'Focus')}
-                  className="p-2.5 bg-[#1c1b1f] border border-[#2d2b30] hover:border-neutral-500 text-neutral-400 hover:text-white rounded-xl text-[11px] font-medium transition-colors"
-                  title="Toggle Mode Manual"
-                >
-                  Switch Mode
-                </button>
-                <button 
-                  onClick={() => setIsTimerRunning(!isTimerRunning)}
-                  className={`p-2.5 rounded-xl text-xs font-medium transition-all flex items-center gap-1.5 ${isTimerRunning ? 'bg-[#3d1d1d] text-[#ffb4ab] border border-[#601414]' : 'bg-[#212433] text-[#aac7ff] border border-[#30374d] hover:bg-[#2a3047]'}`}
-                >
-                  {isTimerRunning ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
-                  {isTimerRunning ? 'Pause' : 'Start'}
-                </button>
-                <button 
-                  onClick={() => { setIsTimerRunning(false); setTimeLeft(timerMode === 'Focus' ? focusLength * 60 : breakLength * 60); }}
-                  className="p-2.5 bg-[#25232a] border border-[#49454f] text-neutral-400 hover:text-white rounded-xl transition-colors"
-                  title="Reset Timer"
-                >
-                  <RotateCcw className="h-3.5 w-3.5" />
-                </button>
-                <button 
-                  onClick={() => setShowTimerConfig(!showTimerConfig)} 
-                  className={`p-2.5 rounded-xl border transition-colors ${showTimerConfig ? 'bg-[#aac7ff] text-[#002f66] border-[#aac7ff]' : 'bg-[#25232a] border-[#49454f] text-neutral-400 hover:text-white'}`}
-                  title="Configure Intervals"
-                >
-                  <Sliders className="h-3.5 w-3.5" />
-                </button>
-              </div>
+            <p className="text-[11px] text-neutral-500 max-w-sm">
+              {timerMode === 'Focus' ? `Focus engine set to ${focusLength}m` : `Break window set to ${breakLength}m`}. Use the slider toggle to manage manual configurations.
+            </p>
+
+            {/* V3 Linear Bottom Action Toolbar */}
+            <div className="flex items-center justify-center gap-2 w-full pt-1">
+              <button 
+                onClick={() => setTimerMode(timerMode === 'Focus' ? 'Break' : 'Focus')}
+                className="px-3.5 py-2 bg-[#1c1b1f] border border-[#2d2b30] hover:border-neutral-500 text-neutral-400 hover:text-white rounded-xl text-xs font-medium transition-colors"
+                title="Toggle Mode Manual"
+              >
+                Switch Mode
+              </button>
+              
+              <button 
+                onClick={() => setIsTimerRunning(!isTimerRunning)}
+                className={`px-4 py-2 rounded-xl text-xs font-medium transition-all flex items-center gap-1.5 ${isTimerRunning ? 'bg-[#3d1d1d] text-[#ffb4ab] border border-[#601414]' : 'bg-[#212433] text-[#aac7ff] border border-[#30374d] hover:bg-[#2a3047]'}`}
+              >
+                {isTimerRunning ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
+                {isTimerRunning ? 'Pause' : 'Start'}
+              </button>
+
+              <button 
+                onClick={() => { setIsTimerRunning(false); setTimeLeft(timerMode === 'Focus' ? focusLength * 60 : breakLength * 60); }}
+                className="p-2 bg-[#25232a] border border-[#49454f] text-neutral-400 hover:text-white rounded-xl transition-colors"
+                title="Reset Timer"
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+              </button>
+
+              <button 
+                onClick={() => setShowTimerConfig(!showTimerConfig)} 
+                className={`p-2 rounded-xl border transition-colors ${showTimerConfig ? 'bg-[#aac7ff] text-[#002f66] border-[#aac7ff]' : 'bg-[#25232a] border-[#49454f] text-neutral-400 hover:text-white'}`}
+                title="Configure Intervals"
+              >
+                <Sliders className="h-3.5 w-3.5" />
+              </button>
             </div>
 
             {/* Configurable Multi-Interval Settings Panel */}
             {showTimerConfig && (
-              <div className="p-3 bg-[#1c1b1f] border border-[#2d2b30] rounded-xl grid grid-cols-2 gap-4 text-xs animate-fade-in">
+              <div className="w-full p-3 bg-[#1c1b1f] border border-[#2d2b30] rounded-xl grid grid-cols-2 gap-4 text-xs text-left animate-fade-in">
                 <div className="space-y-1.5">
                   <label className="text-neutral-400 font-medium block">Focus Duration (Minutes):</label>
                   <input 
@@ -683,7 +682,7 @@ export default function App() {
                 </div>
 
                 <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] text-[#919191] font-medium">Due Date:</span>
+                  <span className="text-[10px] text-[#919191] font-medium">Due:</span>
                   <select value={taskDueDate} onChange={(e) => setTaskDueDate(e.target.value)} className="bg-[#1c1b1f] border border-[#49454f] text-[#e3e3e3] text-[11px] rounded-lg px-2 py-1 focus:outline-none focus:border-[#aac7ff] cursor-pointer">
                     <option value="Today">Today</option>
                     <option value="Tomorrow">Tomorrow</option>
@@ -693,116 +692,108 @@ export default function App() {
                 </div>
               </div>
 
-              <button type="submit" className="px-3 py-1.5 bg-[#aac7ff] text-[#002f66] rounded-xl font-semibold text-xs flex items-center gap-1 hover:bg-[#b6c4ff] transition-all ml-auto">
-                <Plus className="h-3.5 w-3.5" /> Add Task
+              <button type="submit" className="px-4 py-1.5 bg-[#aac7ff] text-[#002f66] rounded-xl font-bold text-xs hover:bg-[#b6c4ff] transition-colors flex items-center gap-1">
+                <Plus className="h-3.5 w-3.5 stroke-[3]" /> Add Task
               </button>
             </div>
           </form>
+
         </div>
       )}
 
-      {/* TAB 2: INTERACTIVE METRICS */}
+      {/* TAB 2: ANALYTICS PERFORMANCE METRICS */}
       {activeTab === 'statistics' && (
-        <div className="w-full max-w-2xl bg-[#1c1b1f] border border-[#2d2b30] rounded-[32px] p-6 flex flex-col gap-6 shadow-lg animate-fade-in">
+        <div className="w-full max-w-2xl bg-[#1c1b1f] border border-[#2d2b30] rounded-[32px] p-6 flex flex-col gap-6 shadow-lg">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-neutral-800/60 pb-4">
             <div>
-              <h2 className="text-sm font-semibold tracking-wider text-[#919191] uppercase">Performance Metrics</h2>
-              <p className="text-xs text-neutral-400 mt-0.5">Analysis of closed tasks over time.</p>
+              <h2 className="text-base font-medium text-[#e3e3e3]">Metrics & Core Insights</h2>
+              <p className="text-[11px] text-neutral-500 mt-0.5">Real-time breakdown of tasks processed across workstreams.</p>
             </div>
             
             <div className="flex items-center gap-2">
-              <span className="text-xs text-neutral-400">Filter Category:</span>
+              <span className="text-[10px] text-[#919191] font-medium">Filter Deck:</span>
               <select 
                 value={statsCategoryFilter} 
-                onChange={(e) => setStatsCategoryFilter(e.target.value)}
-                className="bg-[#121212] border border-[#49454f] text-[#e3e3e3] text-xs rounded-xl px-3 py-1.5 focus:outline-none focus:border-[#aac7ff] cursor-pointer"
+                onChange={(e) => setStatsCategoryFilter(e.target.value)} 
+                className="bg-[#121212] border border-[#49454f] text-[#e3e3e3] text-[11px] rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-[#aac7ff] cursor-pointer"
               >
                 <option value="All">All Categories</option>
-                {buckets.map((b) => (
+                {buckets.map(b => (
                   <option key={b} value={b}>{b}</option>
                 ))}
               </select>
             </div>
           </div>
 
+          {/* Lifetime Distribution Metrics */}
           <div className="grid grid-cols-3 gap-3">
-            <div className="bg-[#121212] border border-[#2d2b30] p-3.5 rounded-2xl text-center">
-              <span className="text-[10px] font-bold text-[#ffb4ab] uppercase tracking-wider block">High Priority</span>
-              <span className="text-xl font-semibold text-[#e3e3e3] block mt-1 tabular-nums">{lifetimePriorities.High}</span>
+            <div className="bg-[#121212] border border-[#2d2b30] p-3.5 rounded-xl text-center space-y-1">
+              <span className="text-[9px] font-bold text-[#ffb4ab] uppercase tracking-wider block">High Priority</span>
+              <p className="text-xl font-mono font-bold text-[#e3e3e3]">{lifetimePriorities.High}</p>
             </div>
-            <div className="bg-[#121212] border border-[#2d2b30] p-3.5 rounded-2xl text-center">
-              <span className="text-[10px] font-bold text-[#ffe082] uppercase tracking-wider block">Medium Priority</span>
-              <span className="text-xl font-semibold text-[#e3e3e3] block mt-1 tabular-nums">{lifetimePriorities.Medium}</span>
+            <div className="bg-[#121212] border border-[#2d2b30] p-3.5 rounded-xl text-center space-y-1">
+              <span className="text-[9px] font-bold text-[#ffe082] uppercase tracking-wider block">Medium Priority</span>
+              <p className="text-xl font-mono font-bold text-[#e3e3e3]">{lifetimePriorities.Medium}</p>
             </div>
-            <div className="bg-[#121212] border border-[#2d2b30] p-3.5 rounded-2xl text-center">
-              <span className="text-[10px] font-bold text-[#c2e7ff] uppercase tracking-wider block">Low Priority</span>
-              <span className="text-xl font-semibold text-[#e3e3e3] block mt-1 tabular-nums">{lifetimePriorities.Low}</span>
+            <div className="bg-[#121212] border border-[#2d2b30] p-3.5 rounded-xl text-center space-y-1">
+              <span className="text-[9px] font-bold text-[#c2e7ff] uppercase tracking-wider block">Low Priority</span>
+              <p className="text-xl font-mono font-bold text-[#e3e3e3]">{lifetimePriorities.Low}</p>
             </div>
           </div>
 
-          <div className="bg-[#121212] border border-[#2d2b30] rounded-2xl p-5">
-            <span className="text-xs font-semibold text-neutral-400 block mb-6">Daily Task Completion History (Last 7 Active Days)</span>
+          {/* Productivity Velocity Chart (Last 7 Active Iterations) */}
+          <div className="bg-[#121212] border border-[#2d2b30] rounded-2xl p-4 space-y-4">
+            <span className="text-[10px] font-bold text-[#919191] uppercase tracking-wider block">Completion Engine Output (Last 7 Days)</span>
             
-            {chartData.length > 0 ? (
-              <div className="space-y-6">
-                <div className="h-44 flex items-end justify-between gap-3 px-2 border-b border-neutral-800/80 pb-1">
-                  {chartData.map((day, i) => {
-                    const heightPct = maxTotal > 0 ? (day.total / maxTotal) * 100 : 0;
-                    const highPct = day.total > 0 ? (day.High / day.total) * 100 : 0;
-                    const medPct = day.total > 0 ? (day.Medium / day.total) * 100 : 0;
-                    const lowPct = day.total > 0 ? (day.Low / day.total) * 100 : 0;
+            <div className="h-32 flex items-end justify-between gap-2 pt-2 border-b border-neutral-800 px-2">
+              {chartData.map((day, idx) => {
+                const total = day.total || 0;
+                const percentage = maxTotal > 0 ? (total / maxTotal) * 100 : 0;
+                
+                return (
+                  <div key={idx} className="flex flex-col items-center flex-1 group relative h-full justify-end">
+                    {/* Tooltip on Hover */}
+                    <div className="absolute bottom-full mb-2 bg-[#1c1b1f] border border-[#49454f] rounded-lg p-2 text-[9px] text-[#e3e3e3] opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 space-y-0.5 shadow-xl min-w-[75px] text-center">
+                      <p className="font-bold border-b border-neutral-800 pb-0.5 mb-1">{day.date}</p>
+                      <p className="text-[#ffb4ab]">High: {day.High}</p>
+                      <p className="text-[#ffe082]">Med: {day.Medium}</p>
+                      <p className="text-[#c2e7ff]">Low: {day.Low}</p>
+                      <p className="font-bold text-[#aac7ff] pt-0.5 border-t border-neutral-800 mt-0.5">Total: {total}</p>
+                    </div>
 
-                    return (
-                      <div key={i} className="flex-1 flex flex-col items-center group relative h-full justify-end">
-                        <div className="absolute -top-12 bg-[#1c1b1f] border border-[#49454f] rounded-lg p-2 text-[10px] space-y-0.5 opacity-0 group-hover:opacity-100 transition-opacity z-10 shadow-xl pointer-events-none min-w-[85px]">
-                          <p className="font-bold border-b border-neutral-800 pb-0.5 mb-1 text-center text-neutral-300">{day.date}</p>
-                          <p className="flex justify-between text-[#ffb4ab]">High: <span className="font-mono">{day.High}</span></p>
-                          <p className="flex justify-between text-[#ffe082]">Med: <span className="font-mono">{day.Medium}</span></p>
-                          <p className="flex justify-between text-[#c2e7ff]">Low: <span className="font-mono">{day.Low}</span></p>
-                          <p className="flex justify-between text-white border-t border-neutral-800 pt-0.5 font-bold">Total: <span className="font-mono">{day.total}</span></p>
-                        </div>
+                    {/* Stacked Vertical Segment Bar */}
+                    <div 
+                      className="w-full rounded-t-md transition-all duration-500 bg-[#aac7ff]/20 group-hover:bg-[#aac7ff]/30 flex flex-col justify-end overflow-hidden"
+                      style={{ height: `${Math.max(8, percentage)}%` }}
+                    >
+                      {/* Segment Colors inside the Bar matching priority colors */}
+                      {day.High > 0 && <div className="bg-[#ffb4ab]/80 flex-1 min-h-[3px]" title={`High: ${day.High}`} />}
+                      {day.Medium > 0 && <div className="bg-[#ffe082]/80 flex-1 min-h-[3px]" title={`Medium: ${day.Medium}`} />}
+                      {day.Low > 0 && <div className="bg-[#c2e7ff]/80 flex-1 min-h-[3px]" title={`Low: ${day.Low}`} />}
+                    </div>
+                    
+                    <span className="text-[8px] text-neutral-500 mt-2 truncate max-w-[45px] font-mono">{day.date.split('/')[1] || day.date}</span>
+                  </div>
+                );
+              })}
 
-                        <div 
-                          className="w-full rounded-t-md overflow-hidden flex flex-col justify-end transition-all duration-500 ease-out min-h-[4px]"
-                          style={{ height: `${heightPct}%` }}
-                        >
-                          {day.High > 0 && <div className="bg-[#601414] border-t border-[#ffb4ab]/20" style={{ height: `${highPct}%` }} />}
-                          {day.Medium > 0 && <div className="bg-[#4f4007] border-t border-[#ffe082]/20" style={{ height: `${medPct}%` }} />}
-                          {day.Low > 0 && <div className="bg-[#223344] border-t border-[#c2e7ff]/20" style={{ height: `${lowPct}%` }} />}
-                        </div>
-
-                        <span className="text-[9px] text-neutral-500 mt-2 block truncate w-full text-center tracking-tight">
-                          {day.date.substring(0, 5)}
-                        </span>
-                      </div>
-                    );
-                  })}
+              {chartData.length === 0 && (
+                <div className="w-full h-full flex items-center justify-center">
+                  <p className="text-xs text-neutral-600 italic">No historical timeline markers available yet.</p>
                 </div>
+              )}
+            </div>
 
-                <div className="flex flex-wrap justify-center gap-x-5 gap-y-1.5 text-[10px] text-neutral-400 pt-1">
-                  <div className="flex items-center gap-1.5">
-                    <div className="h-2.5 w-2.5 bg-[#601414] border border-[#ffb4ab]/30 rounded" />
-                    <span>High Priority</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <div className="h-2.5 w-2.5 bg-[#4f4007] border border-[#ffe082]/30 rounded" />
-                    <span>Medium Priority</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <div className="h-2.5 w-2.5 bg-[#223344] border border-[#c2e7ff]/30 rounded" />
-                    <span>Low Priority</span>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-10 border border-dashed border-[#2d2b30] rounded-xl bg-[#151418]">
-                <p className="text-xs text-[#79747e]">No daily completion history available to chart yet.</p>
-              </div>
-            )}
+            <div className="flex justify-center gap-4 text-[9px] text-neutral-500 pt-1">
+              <div className="flex items-center gap-1.5"><div className="h-1.5 w-1.5 bg-[#ffb4ab] rounded-full" /> High</div>
+              <div className="flex items-center gap-1.5"><div className="h-1.5 w-1.5 bg-[#ffe082] rounded-full" /> Medium</div>
+              <div className="flex items-center gap-1.5"><div className="h-1.5 w-1.5 bg-[#c2e7ff] rounded-full" /> Low</div>
+            </div>
           </div>
         </div>
       )}
 
+      {/* Subtle Personal Branding Footer */}
       <ProjectFooter />
     </div>
   );

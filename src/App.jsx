@@ -36,7 +36,7 @@ export default function App() {
   
   const [isSignUpMode, setIsSignUpMode] = useState(false);
   const [inputUser, setInputUser] = useState('');
-  const [inputPass, setInputPass} = useState('');
+  const [inputPass, setInputPass] = useState('');
   const [authFeedback, setAuthFeedback] = useState('');
 
   const [tasks, setTasks] = useState([]);

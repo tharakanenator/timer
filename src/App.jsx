@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import confetti from 'canvas-confetti';
 import { 
   Plus, Settings, User, Lock, ArrowRight, EyeOff, 
-  Trash2, CheckCircle, ArrowUpDown, ShieldAlert, BarChart2, List, Play, Pause, RotateCcw, Sliders
+  Trash2, CheckCircle, ArrowUpDown, ShieldAlert, BarChart2, List, Play, Pause, RotateCcw, Sliders, Target, Crosshair
 } from 'lucide-react';
 
 // Subtle Personal Branding Link Component
@@ -35,6 +35,9 @@ export default function App() {
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [showTimerConfig, setShowTimerConfig] = useState(false);
   const timerRef = useRef(null);
+
+  // --- Focus Target State ---
+  const [activeFocusTask, setActiveFocusTask] = useState(null);
 
   // --- Authentication & Session States ---
   const [username, setUsername] = useState(() => localStorage.getItem('pomo_user_session') || '');
@@ -234,6 +237,7 @@ export default function App() {
     setIsTimerRunning(false);
     setTimerMode('Focus');
     setTimeLeft(25 * 60);
+    setActiveFocusTask(null);
   };
 
   // --- Task Mutations ---
@@ -259,12 +263,26 @@ export default function App() {
   const handleCompleteTask = (id) => {
     const target = tasks.find(t => t.id === id);
     if (!target) return;
+
+    // Remove from active focus if this task was selected
+    if (activeFocusTask && activeFocusTask.id === id) {
+      setActiveFocusTask(null);
+    }
+
     const updatedTasks = tasks.filter(t => t.id !== id);
     const updatedCompleted = [...completedTasks, { ...target, completedAt: new Date().toLocaleDateString() }];
     setTasks(updatedTasks);
     setCompletedTasks(updatedCompleted);
     if (typeof confetti === 'function') confetti({ particleCount: 60, spread: 50, colors: ['#aac7ff', '#bacfbc'] });
     syncToStorage(updatedTasks, updatedCompleted, buckets);
+  };
+
+  const handleSelectFocusTask = (task) => {
+    if (activeFocusTask && activeFocusTask.id === task.id) {
+      setActiveFocusTask(null); // Toggle off if clicked again
+    } else {
+      setActiveFocusTask(task);
+    }
   };
 
   const handleAddBucket = () => {
@@ -421,10 +439,10 @@ export default function App() {
 
   // --- INTERFACE VIEW B: MAIN WORKSPACE ---
   return (
-    <div className="min-h-screen bg-[#121212] text-[#e3e3e3] flex flex-col items-center py-10 px-4">
+    <div className="min-h-screen bg-[#121212] text-[#e3e3e3] flex flex-col items-center py-8 px-4 w-full">
       
       {/* Session Header Status */}
-      <div className="w-full max-w-2xl flex justify-between items-center mb-6 px-2">
+      <div className="w-full max-w-5xl flex justify-between items-center mb-6 px-2">
         <div className="flex items-center gap-2">
           <div className="h-2 w-2 bg-[#bacfbc] rounded-full" />
           <span className="text-xs text-[#919191]">Logged in as: <strong className="text-[#e3e3e3]">{isGuestMode ? 'Guest' : username}</strong></span>
@@ -434,13 +452,13 @@ export default function App() {
         <div className="flex bg-[#1c1b1f] border border-[#2d2b30] rounded-xl p-1 text-xs">
           <button 
             onClick={() => setActiveTab('tasks')} 
-            className={`px-3 py-1.5 rounded-lg font-medium flex items-center gap-1.5 transition-all ${activeTab === 'tasks' ? 'bg-[#25232a] text-[#aac7ff]' : 'text-neutral-400 hover:text-white'}`}
+            className={`px-4 py-1.5 rounded-lg font-medium flex items-center gap-1.5 transition-all ${activeTab === 'tasks' ? 'bg-[#25232a] text-[#aac7ff]' : 'text-neutral-400 hover:text-white'}`}
           >
-            <List className="h-3.5 w-3.5" /> Tasks
+            <List className="h-3.5 w-3.5" /> Workspace
           </button>
           <button 
             onClick={() => setActiveTab('statistics')} 
-            className={`px-3 py-1.5 rounded-lg font-medium flex items-center gap-1.5 transition-all ${activeTab === 'statistics' ? 'bg-[#25232a] text-[#aac7ff]' : 'text-neutral-400 hover:text-white'}`}
+            className={`px-4 py-1.5 rounded-lg font-medium flex items-center gap-1.5 transition-all ${activeTab === 'statistics' ? 'bg-[#25232a] text-[#aac7ff]' : 'text-neutral-400 hover:text-white'}`}
           >
             <BarChart2 className="h-3.5 w-3.5" /> Statistics
           </button>
@@ -451,259 +469,294 @@ export default function App() {
         </button>
       </div>
 
-      {/* TAB 1: CORE TASKS & RESTORED V3 POMODORO TIMER */}
+      {/* TAB 1: CORE WORKSPACE (DUAL CARDS: TIMER LEFT / TASKS RIGHT) */}
       {activeTab === 'tasks' && (
-        <div className="w-full max-w-2xl bg-[#1c1b1f] border border-[#2d2b30] rounded-[32px] p-6 flex flex-col gap-5 shadow-lg">
+        <div className="w-full max-w-5xl grid grid-cols-1 md:grid-cols-5 gap-6 items-start">
           
-          {/* Restored V3 Dedicated Pomodoro Dashboard Module */}
-          <div className="bg-[#121212] border border-[#2d2b30] rounded-2xl p-6 flex flex-col items-center justify-center text-center space-y-4">
-            
-            {/* V3 High-Contrast Large Counter */}
-            <div className="space-y-1 select-none">
-              <h1 className={`text-5xl font-bold font-mono tracking-wider ${timerMode === 'Focus' ? 'text-[#aac7ff]' : 'text-[#ffe082]'}`}>
-                {formatTime(timeLeft)}
-              </h1>
-              <div className="flex justify-center pt-1">
-                <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-bold tracking-widest uppercase border ${timerMode === 'Focus' ? 'bg-[#212433] text-[#aac7ff] border-[#30374d]' : 'bg-[#332a15] text-[#ffe082] border-[#4f4007]'}`}>
-                  {timerMode} Mode
-                </span>
-              </div>
+          {/* LEFT PANEL: Restored V3 Dedicated Pomodoro Card Module (Spans 2 columns) */}
+          <div className="md:col-span-2 bg-[#1c1b1f] border border-[#2d2b30] rounded-[32px] p-6 flex flex-col gap-5 shadow-lg h-full sticky top-8">
+            <div className="flex items-center gap-2 border-b border-neutral-800/60 pb-3">
+              <Crosshair className="h-4 w-4 text-[#aac7ff]" />
+              <h2 className="text-xs font-semibold tracking-widest text-[#919191] uppercase">Time Box Deck</h2>
             </div>
 
-            <p className="text-[11px] text-neutral-500 max-w-sm">
-              {timerMode === 'Focus' ? `Focus engine set to ${focusLength}m` : `Break window set to ${breakLength}m`}. Use the slider toggle to manage manual configurations.
-            </p>
-
-            {/* V3 Linear Bottom Action Toolbar */}
-            <div className="flex items-center justify-center gap-2 w-full pt-1">
-              <button 
-                onClick={() => setTimerMode(timerMode === 'Focus' ? 'Break' : 'Focus')}
-                className="px-3.5 py-2 bg-[#1c1b1f] border border-[#2d2b30] hover:border-neutral-500 text-neutral-400 hover:text-white rounded-xl text-xs font-medium transition-colors"
-                title="Toggle Mode Manual"
-              >
-                Switch Mode
-              </button>
+            <div className="bg-[#121212] border border-[#2d2b30] rounded-2xl p-6 flex flex-col items-center justify-center text-center space-y-5">
               
-              <button 
-                onClick={() => setIsTimerRunning(!isTimerRunning)}
-                className={`px-4 py-2 rounded-xl text-xs font-medium transition-all flex items-center gap-1.5 ${isTimerRunning ? 'bg-[#3d1d1d] text-[#ffb4ab] border border-[#601414]' : 'bg-[#212433] text-[#aac7ff] border border-[#30374d] hover:bg-[#2a3047]'}`}
-              >
-                {isTimerRunning ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
-                {isTimerRunning ? 'Pause' : 'Start'}
-              </button>
-
-              <button 
-                onClick={() => { setIsTimerRunning(false); setTimeLeft(timerMode === 'Focus' ? focusLength * 60 : breakLength * 60); }}
-                className="p-2 bg-[#25232a] border border-[#49454f] text-neutral-400 hover:text-white rounded-xl transition-colors"
-                title="Reset Timer"
-              >
-                <RotateCcw className="h-3.5 w-3.5" />
-              </button>
-
-              <button 
-                onClick={() => setShowTimerConfig(!showTimerConfig)} 
-                className={`p-2 rounded-xl border transition-colors ${showTimerConfig ? 'bg-[#aac7ff] text-[#002f66] border-[#aac7ff]' : 'bg-[#25232a] border-[#49454f] text-neutral-400 hover:text-white'}`}
-                title="Configure Intervals"
-              >
-                <Sliders className="h-3.5 w-3.5" />
-              </button>
-            </div>
-
-            {/* Configurable Multi-Interval Settings Panel */}
-            {showTimerConfig && (
-              <div className="w-full p-3 bg-[#1c1b1f] border border-[#2d2b30] rounded-xl grid grid-cols-2 gap-4 text-xs text-left animate-fade-in">
-                <div className="space-y-1.5">
-                  <label className="text-neutral-400 font-medium block">Focus Duration (Minutes):</label>
-                  <input 
-                    type="number" 
-                    min="1" 
-                    max="180" 
-                    value={focusLength} 
-                    onChange={(e) => setFocusLength(Math.max(1, parseInt(e.target.value) || 1))} 
-                    className="w-full bg-[#121212] border border-[#49454f] rounded-lg px-2.5 py-1.5 text-xs text-[#e3e3e3] focus:outline-none focus:border-[#aac7ff]" 
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-neutral-400 font-medium block">Break Duration (Minutes):</label>
-                  <input 
-                    type="number" 
-                    min="1" 
-                    max="60" 
-                    value={breakLength} 
-                    onChange={(e) => setBreakLength(Math.max(1, parseInt(e.target.value) || 1))} 
-                    className="w-full bg-[#121212] border border-[#49454f] rounded-lg px-2.5 py-1.5 text-xs text-[#e3e3e3] focus:outline-none focus:border-[#aac7ff]" 
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Active Tasks Panel */}
-          <div>
-            <div className="flex justify-between items-center mb-4">
-              <div className="flex items-center gap-3">
-                <h2 className="text-sm font-semibold tracking-wider text-[#919191] uppercase">Active Tasks</h2>
-                <div className="flex items-center bg-[#121212] border border-[#2d2b30] rounded-lg p-0.5 text-[10px] font-medium text-neutral-400">
-                  <button 
-                    onClick={() => setSortBy('priority')} 
-                    className={`px-2 py-1 rounded-md transition-all flex items-center gap-1 ${sortBy === 'priority' ? 'bg-[#25232a] text-[#aac7ff] font-semibold' : 'hover:text-white'}`}
-                  >
-                    <ShieldAlert className="h-2.5 w-2.5" /> Sort by Priority
-                  </button>
-                  <button 
-                    onClick={() => setSortBy('dueDate')} 
-                    className={`px-2 py-1 rounded-md transition-all flex items-center gap-1 ${sortBy === 'dueDate' ? 'bg-[#25232a] text-[#aac7ff] font-semibold' : 'hover:text-white'}`}
-                  >
-                    <ArrowUpDown className="h-2.5 w-2.5" /> Sort by Due Date
-                  </button>
+              {/* V3 High-Contrast Large Counter */}
+              <div className="space-y-1 select-none w-full">
+                <h1 className={`text-6xl font-bold font-mono tracking-wider transition-all duration-300 ${timerMode === 'Focus' ? 'text-[#aac7ff]' : 'text-[#ffe082]'}`}>
+                  {formatTime(timeLeft)}
+                </h1>
+                <div className="flex justify-center pt-1.5">
+                  <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-bold tracking-widest uppercase border ${timerMode === 'Focus' ? 'bg-[#212433] text-[#aac7ff] border-[#30374d]' : 'bg-[#332a15] text-[#ffe082] border-[#4f4007]'}`}>
+                    {timerMode} Mode
+                  </span>
                 </div>
               </div>
 
-              <button 
-                onClick={() => setShowBucketSettings(!showBucketSettings)} 
-                className={`p-1.5 rounded-lg border transition-colors ${showBucketSettings ? 'bg-[#aac7ff] text-[#002f66] border-[#aac7ff]' : 'bg-[#25232a] border-[#49454f] text-[#919191] hover:text-[#e3e3e3]'}`}
-              >
-                <Settings className="h-4 w-4" />
-              </button>
-            </div>
-
-            {showBucketSettings && (
-              <div className="mb-4 p-4 bg-[#121212] border border-[#2d2b30] rounded-2xl space-y-3">
-                <span className="text-[10px] font-semibold text-[#aac7ff] uppercase block tracking-wider">Manage Categories</span>
-                <div className="flex flex-wrap gap-1.5 py-0.5">
-                  {buckets.map((b) => (
-                    <div key={b} className="flex items-center gap-1 px-2.5 py-0.5 bg-[#1c1b1f] border border-[#2d2b30] rounded-full text-[10px]">
-                      <span>{b}</span>
-                      <button onClick={() => handleRemoveBucket(b)} className="text-[#ffb4a2] hover:text-[#ff8f73] font-bold ml-1.5">×</button>
-                    </div>
-                  ))}
-                </div>
-                <div className="flex gap-2 pt-1">
-                  <input type="text" placeholder="New category name..." value={newBucketName} onChange={(e) => setNewBucketName(e.target.value)} className="bg-[#1c1b1f] border border-[#49454f] rounded-xl px-3 py-1.5 text-xs text-[#e3e3e3] flex-1 focus:outline-none focus:border-[#aac7ff]" />
-                  <button onClick={handleAddBucket} className="px-3 bg-[#aac7ff] text-[#002f66] rounded-xl font-medium text-xs hover:bg-[#b6c4ff]">Add</button>
-                </div>
-              </div>
-            )}
-
-            {/* Active Core Streams */}
-            <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
-              {getSortedTasks().map((task) => (
-                <div key={task.id} className="p-3.5 bg-[#121212] border border-[#2d2b30] rounded-xl flex items-center justify-between gap-4 group hover:border-[#43474e] transition-all">
-                  <div className="flex flex-col min-w-0 flex-1 gap-2">
-                    <span className="text-xs font-medium text-[#e3e3e3] break-words">{task.text}</span>
-                    <div className="flex items-center flex-wrap gap-2 text-[9px] text-[#919191]">
-                      <span className={`px-2 py-0.5 rounded-full border text-[8px] uppercase tracking-wide font-bold ${getPriorityStyle(task.priority)}`}>
-                        {task.priority}
-                      </span>
-                      <span className={`px-2 py-0.5 rounded-full border ${getBucketStyle(task.bucket)}`}>{task.bucket}</span>
-                      <span>• Due: <strong className="text-neutral-300">{task.dueDate}</strong></span>
-                    </div>
+              {/* DYNAMIC FOCUS TARGET SLOT */}
+              <div className="w-full border-t border-b border-neutral-800/60 py-3.5 my-1 min-h-[72px] flex flex-col justify-center items-center">
+                {activeFocusTask ? (
+                  <div className="space-y-1 w-full px-2">
+                    <span className="text-[9px] font-bold uppercase tracking-widest text-neutral-500 flex items-center justify-center gap-1">
+                      <Target className="h-3 w-3 text-[#ffb4a2]" /> Active Target Objective
+                    </span>
+                    <p className="text-xs text-[#e3e3e3] font-medium text-center line-clamp-2 break-words">
+                      {activeFocusTask.text}
+                    </p>
                   </div>
-                  <button 
-                    onClick={() => handleCompleteTask(task.id)} 
-                    className="h-8 w-8 rounded-xl bg-[#25232a] border border-[#49454f] text-[#bacfbc] flex items-center justify-center hover:bg-[#bacfbc] hover:text-[#002f66] hover:border-[#bacfbc] transition-all flex-shrink-0 text-xs font-bold"
-                  >
-                    ✓
-                  </button>
-                </div>
-              ))}
-              {tasks.length === 0 && (
-                <div className="text-center py-8 border border-dashed border-[#2d2b30] rounded-xl bg-[#151418]">
-                  <p className="text-xs text-[#79747e]">No active tasks. Use the form below to add a task.</p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* History Panel */}
-          <div className="border-t border-neutral-800/60 pt-4">
-            <div className="flex justify-between items-center mb-3">
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-semibold tracking-wider text-neutral-500 uppercase">Completed Tasks</span>
-                <span className="text-[9px] px-2 py-0.5 bg-[#2d332d] text-[#bacfbc] border border-[#3b453b] rounded-full font-bold">{completedTasks.length} total</span>
+                ) : (
+                  <div className="text-center text-neutral-600 px-4 space-y-1">
+                    <p className="text-xs italic">No focus anchor active</p>
+                    <p className="text-[10px] text-neutral-500">Click a task card target on the right grid to pin it here.</p>
+                  </div>
+                )}
               </div>
-              {completedTasks.length > 0 && (
-                <button onClick={handleClearHistory} className="text-[10px] text-neutral-500 hover:text-[#ffb4a2] transition-colors flex items-center gap-1 underline underline-offset-2">
-                  <Trash2 className="h-3 w-3" /> Clear History
+
+              {/* V3 Linear Bottom Action Toolbar */}
+              <div className="flex items-center justify-center gap-2 w-full">
+                <button 
+                  onClick={() => setTimerMode(timerMode === 'Focus' ? 'Break' : 'Focus')}
+                  className="px-3 py-2 bg-[#1c1b1f] border border-[#2d2b30] hover:border-neutral-500 text-neutral-400 hover:text-white rounded-xl text-[11px] font-medium transition-colors"
+                  title="Toggle Mode Manual"
+                >
+                  Switch Mode
                 </button>
-              )}
-            </div>
-            
-            <div className="space-y-1.5 max-h-[100px] overflow-y-auto pr-1">
-              {completedTasks.map((task, idx) => (
-                <div key={task.id || idx} className="p-2.5 bg-[#141416] border border-[#232225] rounded-xl flex items-center justify-between opacity-40 hover:opacity-80 transition-opacity">
-                  <div className="flex flex-col min-w-0 flex-1">
-                    <span className="text-xs text-neutral-400 line-through truncate">{task.text}</span>
-                    <div className="flex items-center gap-1.5 text-[8px] text-neutral-600 mt-0.5">
-                      <span className="uppercase tracking-wider font-semibold">{task.bucket}</span>
-                      <span>•</span>
-                      <span>Priority: {task.priority}</span>
-                      <span>•</span>
-                      <span>Completed: {task.completedAt || 'Recent'}</span>
-                    </div>
+                
+                <button 
+                  onClick={() => setIsTimerRunning(!isTimerRunning)}
+                  className={`px-4 py-2 rounded-xl text-[11px] font-medium transition-all flex items-center gap-1.5 ${isTimerRunning ? 'bg-[#3d1d1d] text-[#ffb4ab] border border-[#601414]' : 'bg-[#212433] text-[#aac7ff] border border-[#30374d] hover:bg-[#2a3047]'}`}
+                >
+                  {isTimerRunning ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
+                  {isTimerRunning ? 'Pause' : 'Start'}
+                </button>
+
+                <button 
+                  onClick={() => { setIsTimerRunning(false); setTimeLeft(timerMode === 'Focus' ? focusLength * 60 : breakLength * 60); }}
+                  className="p-2 bg-[#25232a] border border-[#49454f] text-neutral-400 hover:text-white rounded-xl transition-colors"
+                  title="Reset Timer"
+                >
+                  <RotateCcw className="h-3.5 w-3.5" />
+                </button>
+
+                <button 
+                  onClick={() => setShowTimerConfig(!showTimerConfig)} 
+                  className={`p-2 rounded-xl border transition-colors ${showTimerConfig ? 'bg-[#aac7ff] text-[#002f66] border-[#aac7ff]' : 'bg-[#25232a] border-[#49454f] text-neutral-400 hover:text-white'}`}
+                  title="Configure Intervals"
+                >
+                  <Sliders className="h-3.5 w-3.5" />
+                </button>
+              </div>
+
+              {/* Configurable Multi-Interval Settings Panel */}
+              {showTimerConfig && (
+                <div className="w-full p-3 bg-[#1c1b1f] border border-[#2d2b30] rounded-xl grid grid-cols-2 gap-3 text-xs text-left animate-fade-in">
+                  <div className="space-y-1">
+                    <label className="text-neutral-400 font-medium block text-[10px]">Focus Mins:</label>
+                    <input 
+                      type="number" 
+                      min="1" 
+                      max="180" 
+                      value={focusLength} 
+                      onChange={(e) => setFocusLength(Math.max(1, parseInt(e.target.value) || 1))} 
+                      className="w-full bg-[#121212] border border-[#49454f] rounded-lg px-2.5 py-1 text-xs text-[#e3e3e3] focus:outline-none focus:border-[#aac7ff]" 
+                    />
                   </div>
-                  <CheckCircle className="h-3.5 w-3.5 text-[#bacfbc] flex-shrink-0 ml-2" />
+                  <div className="space-y-1">
+                    <label className="text-neutral-400 font-medium block text-[10px]">Break Mins:</label>
+                    <input 
+                      type="number" 
+                      min="1" 
+                      max="60" 
+                      value={breakLength} 
+                      onChange={(e) => setBreakLength(Math.max(1, parseInt(e.target.value) || 1))} 
+                      className="w-full bg-[#121212] border border-[#49454f] rounded-lg px-2.5 py-1 text-xs text-[#e3e3e3] focus:outline-none focus:border-[#aac7ff]" 
+                    />
+                  </div>
                 </div>
-              ))}
-              {completedTasks.length === 0 && (
-                <p className="text-[11px] text-neutral-600 text-center py-2 italic">Completed items will appear here.</p>
               )}
             </div>
           </div>
 
-          {/* Addition Entry Form */}
-          <form onSubmit={handleAddTask} className="bg-[#121212] border border-[#2d2b30] rounded-2xl p-3.5 mt-1 space-y-3">
-            <input 
-              type="text" 
-              placeholder="Add a new task..." 
-              value={taskText} 
-              onChange={(e) => setTaskText(e.target.value)} 
-              className="w-full bg-[#1c1b1f] border border-[#49454f] rounded-xl px-3 py-2 text-xs text-[#e3e3e3] focus:outline-none focus:border-[#aac7ff]" 
-            />
-            
-            <div className="flex flex-wrap items-center justify-between gap-3 pt-0.5">
-              <div className="flex flex-wrap items-center gap-3.5">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] text-[#919191] font-medium">Category:</span>
-                  <select value={taskBucket} onChange={(e) => setTaskBucket(e.target.value)} className="bg-[#1c1b1f] border border-[#49454f] text-[#e3e3e3] text-[11px] rounded-lg px-2 py-1 focus:outline-none focus:border-[#aac7ff] cursor-pointer">
-                    {buckets.map((b) => (
-                      <option key={b} value={b}>{b}</option>
-                    ))}
-                  </select>
+          {/* RIGHT PANEL: TASKS WORKSPACE (Spans 3 columns) */}
+          <div className="md:col-span-3 bg-[#1c1b1f] border border-[#2d2b30] rounded-[32px] p-6 flex flex-col gap-5 shadow-lg">
+            <div>
+              <div className="flex justify-between items-center mb-4">
+                <div className="flex items-center gap-3">
+                  <h2 className="text-xs font-semibold tracking-widest text-[#919191] uppercase">Active Tasks Deck</h2>
+                  <div className="flex items-center bg-[#121212] border border-[#2d2b30] rounded-lg p-0.5 text-[10px] font-medium text-neutral-400">
+                    <button 
+                      onClick={() => setSortBy('priority')} 
+                      className={`px-2 py-1 rounded-md transition-all flex items-center gap-1 ${sortBy === 'priority' ? 'bg-[#25232a] text-[#aac7ff] font-semibold' : 'hover:text-white'}`}
+                    >
+                      <ShieldAlert className="h-2.5 w-2.5" /> Priority
+                    </button>
+                    <button 
+                      onClick={() => setSortBy('dueDate')} 
+                      className={`px-2 py-1 rounded-md transition-all flex items-center gap-1 ${sortBy === 'dueDate' ? 'bg-[#25232a] text-[#aac7ff] font-semibold' : 'hover:text-white'}`}
+                    >
+                      <ArrowUpDown className="h-2.5 w-2.5" /> Due Date
+                    </button>
+                  </div>
                 </div>
 
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] text-[#919191] font-medium">Priority:</span>
-                  <select value={taskPriority} onChange={(e) => setTaskPriority(e.target.value)} className="bg-[#1c1b1f] border border-[#49454f] text-[#e3e3e3] text-[11px] rounded-lg px-2 py-1 focus:outline-none focus:border-[#aac7ff] cursor-pointer">
-                    <option value="High">High</option>
-                    <option value="Medium">Medium</option>
-                    <option value="Low">Low</option>
-                  </select>
-                </div>
-
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] text-[#919191] font-medium">Due:</span>
-                  <select value={taskDueDate} onChange={(e) => setTaskDueDate(e.target.value)} className="bg-[#1c1b1f] border border-[#49454f] text-[#e3e3e3] text-[11px] rounded-lg px-2 py-1 focus:outline-none focus:border-[#aac7ff] cursor-pointer">
-                    <option value="Today">Today</option>
-                    <option value="Tomorrow">Tomorrow</option>
-                    <option value="This Week">This Week</option>
-                    <option value="Later">Later</option>
-                  </select>
-                </div>
+                <button 
+                  onClick={() => setShowBucketSettings(!showBucketSettings)} 
+                  className={`p-1.5 rounded-lg border transition-colors ${showBucketSettings ? 'bg-[#aac7ff] text-[#002f66] border-[#aac7ff]' : 'bg-[#25232a] border-[#49454f] text-[#919191] hover:text-[#e3e3e3]'}`}
+                >
+                  <Settings className="h-4 w-4" />
+                </button>
               </div>
 
-              <button type="submit" className="px-4 py-1.5 bg-[#aac7ff] text-[#002f66] rounded-xl font-bold text-xs hover:bg-[#b6c4ff] transition-colors flex items-center gap-1">
-                <Plus className="h-3.5 w-3.5 stroke-[3]" /> Add Task
-              </button>
-            </div>
-          </form>
+              {showBucketSettings && (
+                <div className="mb-4 p-4 bg-[#121212] border border-[#2d2b30] rounded-2xl space-y-3">
+                  <span className="text-[10px] font-semibold text-[#aac7ff] uppercase block tracking-wider">Manage Categories</span>
+                  <div className="flex flex-wrap gap-1.5 py-0.5">
+                    {buckets.map((b) => (
+                      <div key={b} className="flex items-center gap-1 px-2.5 py-0.5 bg-[#1c1b1f] border border-[#2d2b30] rounded-full text-[10px]">
+                        <span>{b}</span>
+                        <button onClick={() => handleRemoveBucket(b)} className="text-[#ffb4a2] hover:text-[#ff8f73] font-bold ml-1.5">×</button>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex gap-2 pt-1">
+                    <input type="text" placeholder="New category name..." value={newBucketName} onChange={(e) => setNewBucketName(e.target.value)} className="bg-[#1c1b1f] border border-[#49454f] rounded-xl px-3 py-1.5 text-xs text-[#e3e3e3] flex-1 focus:outline-none focus:border-[#aac7ff]" />
+                    <button onClick={handleAddBucket} className="px-3 bg-[#aac7ff] text-[#002f66] rounded-xl font-medium text-xs hover:bg-[#b6c4ff]">Add</button>
+                  </div>
+                </div>
+              )}
 
+              {/* Active Core Streams */}
+              <div className="space-y-2 max-h-[290px] overflow-y-auto pr-1">
+                {getSortedTasks().map((task) => {
+                  const isCurrentTarget = activeFocusTask && activeFocusTask.id === task.id;
+                  return (
+                    <div 
+                      key={task.id} 
+                      className={`p-3.5 bg-[#121212] border rounded-xl flex items-center justify-between gap-4 group transition-all duration-200 cursor-pointer ${isCurrentTarget ? 'border-[#aac7ff] bg-[#171a24]' : 'border-[#2d2b30] hover:border-[#43474e]'}`}
+                      onClick={() => handleSelectFocusTask(task)}
+                      title="Click to set as current focus deck item"
+                    >
+                      <div className="flex flex-col min-w-0 flex-1 gap-2">
+                        <span className="text-xs font-medium text-[#e3e3e3] break-words flex items-center gap-1.5">
+                          {isCurrentTarget && <Target className="h-3 w-3 text-[#ffb4a2] flex-shrink-0 animate-pulse" />}
+                          {task.text}
+                        </span>
+                        <div className="flex items-center flex-wrap gap-2 text-[9px] text-[#919191]">
+                          <span className={`px-2 py-0.5 rounded-full border text-[8px] uppercase tracking-wide font-bold ${getPriorityStyle(task.priority)}`}>
+                            {task.priority}
+                          </span>
+                          <span className={`px-2 py-0.5 rounded-full border ${getBucketStyle(task.bucket)}`}>{task.bucket}</span>
+                          <span>• Due: <strong className="text-neutral-300">{task.dueDate}</strong></span>
+                        </div>
+                      </div>
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); handleCompleteTask(task.id); }} 
+                        className="h-8 w-8 rounded-xl bg-[#25232a] border border-[#49454f] text-[#bacfbc] flex items-center justify-center hover:bg-[#bacfbc] hover:text-[#002f66] hover:border-[#bacfbc] transition-all flex-shrink-0 text-xs font-bold"
+                      >
+                        ✓
+                      </button>
+                    </div>
+                  );
+                })}
+                {tasks.length === 0 && (
+                  <div className="text-center py-8 border border-dashed border-[#2d2b30] rounded-xl bg-[#151418]">
+                    <p className="text-xs text-[#79747e]">No active tasks. Use the configuration deck below to add objectives.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* History Panel */}
+            <div className="border-t border-neutral-800/60 pt-4">
+              <div className="flex justify-between items-center mb-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-semibold tracking-wider text-neutral-500 uppercase">Completed Tasks</span>
+                  <span className="text-[9px] px-2 py-0.5 bg-[#2d332d] text-[#bacfbc] border border-[#3b453b] rounded-full font-bold">{completedTasks.length} total</span>
+                </div>
+                {completedTasks.length > 0 && (
+                  <button onClick={handleClearHistory} className="text-[10px] text-neutral-500 hover:text-[#ffb4a2] transition-colors flex items-center gap-1 underline underline-offset-2">
+                    <Trash2 className="h-3 w-3" /> Clear History
+                  </button>
+                )}
+              </div>
+              
+              <div className="space-y-1.5 max-h-[100px] overflow-y-auto pr-1">
+                {completedTasks.map((task, idx) => (
+                  <div key={task.id || idx} className="p-2.5 bg-[#141416] border border-[#232225] rounded-xl flex items-center justify-between opacity-40 hover:opacity-80 transition-opacity">
+                    <div className="flex flex-col min-w-0 flex-1">
+                      <span className="text-xs text-neutral-400 line-through truncate">{task.text}</span>
+                      <div className="flex items-center gap-1.5 text-[8px] text-neutral-600 mt-0.5">
+                        <span className="uppercase tracking-wider font-semibold">{task.bucket}</span>
+                        <span>•</span>
+                        <span>Priority: {task.priority}</span>
+                        <span>•</span>
+                        <span>Completed: {task.completedAt || 'Recent'}</span>
+                      </div>
+                    </div>
+                    <CheckCircle className="h-3.5 w-3.5 text-[#bacfbc] flex-shrink-0 ml-2" />
+                  </div>
+                ))}
+                {completedTasks.length === 0 && (
+                  <p className="text-[11px] text-neutral-600 text-center py-2 italic">Completed items will appear here.</p>
+                )}
+              </div>
+            </div>
+
+            {/* Addition Entry Form */}
+            <form onSubmit={handleAddTask} className="bg-[#121212] border border-[#2d2b30] rounded-2xl p-3.5 mt-1 space-y-3">
+              <input 
+                type="text" 
+                placeholder="Add a new task..." 
+                value={taskText} 
+                onChange={(e) => setTaskText(e.target.value)} 
+                className="w-full bg-[#1c1b1f] border border-[#49454f] rounded-xl px-3 py-2 text-xs text-[#e3e3e3] focus:outline-none focus:border-[#aac7ff]" 
+              />
+              
+              <div className="flex flex-wrap items-center justify-between gap-3 pt-0.5">
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] text-[#919191] font-medium">Category:</span>
+                    <select value={taskBucket} onChange={(e) => setTaskBucket(e.target.value)} className="bg-[#1c1b1f] border border-[#49454f] text-[#e3e3e3] text-[11px] rounded-lg px-2 py-1 focus:outline-none focus:border-[#aac7ff] cursor-pointer">
+                      {buckets.map((b) => (
+                        <option key={b} value={b}>{b}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] text-[#919191] font-medium">Priority:</span>
+                    <select value={taskPriority} onChange={(e) => setTaskPriority(e.target.value)} className="bg-[#1c1b1f] border border-[#49454f] text-[#e3e3e3] text-[11px] rounded-lg px-2 py-1 focus:outline-none focus:border-[#aac7ff] cursor-pointer">
+                      <option value="High">High</option>
+                      <option value="Medium">Medium</option>
+                      <option value="Low">Low</option>
+                    </select>
+                  </div>
+
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] text-[#919191] font-medium">Due:</span>
+                    <select value={taskDueDate} onChange={(e) => setTaskDueDate(e.target.value)} className="bg-[#1c1b1f] border border-[#49454f] text-[#e3e3e3] text-[11px] rounded-lg px-2 py-1 focus:outline-none focus:border-[#aac7ff] cursor-pointer">
+                      <option value="Today">Today</option>
+                      <option value="Tomorrow">Tomorrow</option>
+                      <option value="This Week">This Week</option>
+                      <option value="Later">Later</option>
+                    </select>
+                  </div>
+                </div>
+
+                <button type="submit" className="px-4 py-1.5 bg-[#aac7ff] text-[#002f66] rounded-xl font-bold text-xs hover:bg-[#b6c4ff] transition-colors flex items-center gap-1 ml-auto">
+                  <Plus className="h-3.5 w-3.5 stroke-[3]" /> Add Task
+                </button>
+              </div>
+            </form>
+
+          </div>
         </div>
       )}
 
       {/* TAB 2: ANALYTICS PERFORMANCE METRICS */}
       {activeTab === 'statistics' && (
-        <div className="w-full max-w-2xl bg-[#1c1b1f] border border-[#2d2b30] rounded-[32px] p-6 flex flex-col gap-6 shadow-lg">
+        <div className="w-full max-w-5xl bg-[#1c1b1f] border border-[#2d2b30] rounded-[32px] p-6 flex flex-col gap-6 shadow-lg">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-neutral-800/60 pb-4">
             <div>
               <h2 className="text-base font-medium text-[#e3e3e3]">Metrics & Core Insights</h2>
@@ -745,7 +798,7 @@ export default function App() {
           <div className="bg-[#121212] border border-[#2d2b30] rounded-2xl p-4 space-y-4">
             <span className="text-[10px] font-bold text-[#919191] uppercase tracking-wider block">Completion Engine Output (Last 7 Days)</span>
             
-            <div className="h-32 flex items-end justify-between gap-2 pt-2 border-b border-neutral-800 px-2">
+            <div className="h-40 flex items-end justify-between gap-2 pt-2 border-b border-neutral-800 px-2">
               {chartData.map((day, idx) => {
                 const total = day.total || 0;
                 const percentage = maxTotal > 0 ? (total / maxTotal) * 100 : 0;

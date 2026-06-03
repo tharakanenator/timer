@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import confetti from 'canvas-confetti';
 import { 
   Plus, Settings, User, Lock, ArrowRight, EyeOff, 
-  Trash2, CheckCircle, ArrowUpDown, ShieldAlert, BarChart2, List, Play, Pause, RotateCcw, Sliders, Target, Crosshair, Calendar
+  Trash2, CheckCircle, ShieldAlert, BarChart2, List, Play, Pause, RotateCcw, Sliders, Target, Calendar, Bell, BellOff, Volume2, VolumeX
 } from 'lucide-react';
 
 // Subtle Personal Branding Link Component
@@ -26,7 +26,6 @@ const ProjectFooter = () => {
 
 const PRIORITY_WEIGHTS = { High: 3, Medium: 2, Low: 1 };
 
-// Helper to get today's date string in YYYY-MM-DD format for input defaults
 const getTodayString = () => {
   const today = new Date();
   const offset = today.getTimezoneOffset();
@@ -36,13 +35,21 @@ const getTodayString = () => {
 
 export default function App() {
   // --- Configurable Pomodoro Timer States ---
-  const [focusLength, setFocusLength] = useState(25); // in minutes
-  const [breakLength, setBreakLength] = useState(5);  // in minutes
-  const [timerMode, setTimerMode] = useState('Focus'); // 'Focus' or 'Break'
+  const [focusLength, setFocusLength] = useState(25); 
+  const [breakLength, setBreakLength] = useState(5);  
+  const [timerMode, setTimerMode] = useState('Focus'); 
   const [timeLeft, setTimeLeft] = useState(25 * 60);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [showTimerConfig, setShowTimerConfig] = useState(false);
   const timerRef = useRef(null);
+
+  // --- Persistent Preferences & Alert States ---
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [enableReminders, setEnableReminders] = useState(true);
+  const [reminderIntervalHours, setReminderIntervalHours] = useState(2);
+  const [enableTimerChime, setEnableTimerChime] = useState(true);
+  const [enableTaskChime, setEnableTaskChime] = useState(true);
+  const reminderTimerRef = useRef(null);
 
   // --- Focus Target State ---
   const [activeFocusTask, setActiveFocusTask] = useState(null);
@@ -55,7 +62,7 @@ export default function App() {
   
   const [isSignUpMode, setIsSignUpMode] = useState(false);
   const [inputUser, setInputUser] = useState('');
-  const [inputPass, setInputPass] = useState('');
+  const [inputPass, setInputPass} = useState('');
   const [authFeedback, setAuthFeedback] = useState('');
 
   // --- Active Workspace Core Decks ---
@@ -76,6 +83,92 @@ export default function App() {
   const [sortBy, setSortBy] = useState('priority');
   const [statsCategoryFilter, setStatsCategoryFilter] = useState('All');
 
+  // --- Web Notification System Request ---
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      if (Notification.permission === 'granted') {
+        setNotificationsEnabled(true);
+      } else if (Notification.permission !== 'denied') {
+        Notification.requestPermission().then(permission => {
+          if (permission === 'granted') setNotificationsEnabled(true);
+        });
+      }
+    }
+  }, []);
+
+  // --- Synthesized Native Audio Engine ---
+  const playAudioChime = (type) => {
+    try {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return;
+      const ctx = new AudioContext();
+      
+      if (type === 'timer-end' && enableTimerChime) {
+        // High to Low elegant desk chime
+        const now = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(587.33, now); // D5
+        osc.frequency.setValueAtTime(440.00, now + 0.15); // A4
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.4);
+      } else if (type === 'task-complete' && enableTaskChime) {
+        // Crisp, upward success ding
+        const now = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(523.25, now); // C5
+        osc.frequency.setValueAtTime(659.25, now + 0.08); // E5
+        osc.frequency.setValueAtTime(783.99, now + 0.16); // G5
+        gain.gain.setValueAtTime(0.15, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.35);
+      }
+    } catch (e) {
+      console.error("Audio Synthesis AudioContext pipeline blocked:", e);
+    }
+  };
+
+  const sendDesktopNotification = (title, options) => {
+    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+      try {
+        new Notification(title, options);
+      } catch (e) {
+        console.error("Desktop alert dispatcher exception:", e);
+      }
+    }
+  };
+
+  // --- Customizable Pending Reminders Lifecycle Thread ---
+  useEffect(() => {
+    if (reminderTimerRef.current) clearInterval(reminderTimerRef.current);
+
+    if (enableReminders && tasks.length > 0) {
+      const msInterval = reminderIntervalHours * 60 * 60 * 1000;
+      
+      reminderTimerRef.current = setInterval(() => {
+        if (tasks.length > 0) {
+          sendDesktopNotification("🎯 Task Standup Reminder", {
+            body: `You currently have ${tasks.length} active objectives waiting in your stream. Keep up the velocity!`,
+            icon: "/favicon.ico",
+            tag: "pomo-task-reminder"
+          });
+        }
+      }, msInterval);
+    }
+
+    return () => { if (reminderTimerRef.current) clearInterval(reminderTimerRef.current); };
+  }, [enableReminders, reminderIntervalHours, tasks.length]);
+
   // --- Sync Timer Length Display when Config Changes ---
   useEffect(() => {
     if (!isTimerRunning) {
@@ -92,13 +185,23 @@ export default function App() {
             clearInterval(timerRef.current);
             setIsTimerRunning(false);
             
-            // Fire celebration confetti effects
+            const finishedMode = timerMode;
+            const nextMode = timerMode === 'Focus' ? 'Break' : 'Focus';
+            
+            // Execute audio alert and system notification hooks
+            playAudioChime('timer-end');
+            sendDesktopNotification(`⌛ ${finishedMode} Interval Completed!`, {
+              body: finishedMode === 'Focus' 
+                ? "Excellent focus block. Time to step back, stretch, and unlock your break." 
+                : "Break interval expired. Standup complete, let's step back into the core sprint.",
+              requireInteraction: true,
+              tag: "pomo-timer-complete"
+            });
+
             if (typeof confetti === 'function') {
-              confetti({ particleCount: 80, spread: 60, colors: timerMode === 'Focus' ? ['#aac7ff', '#bacfbc'] : ['#ffe082', '#ffb4a2'] });
+              confetti({ particleCount: 80, spread: 60, colors: finishedMode === 'Focus' ? ['#aac7ff', '#bacfbc'] : ['#ffe082', '#ffb4a2'] });
             }
             
-            // Auto-switch mode cycle
-            const nextMode = timerMode === 'Focus' ? 'Break' : 'Focus';
             setTimerMode(nextMode);
             return nextMode === 'Focus' ? focusLength * 60 : breakLength * 60;
           }
@@ -109,7 +212,7 @@ export default function App() {
       clearInterval(timerRef.current);
     }
     return () => clearInterval(timerRef.current);
-  }, [isTimerRunning, timerMode, focusLength, breakLength]);
+  }, [isTimerRunning, timerMode, focusLength, breakLength, enableTimerChime]);
 
   // Data Hydration Orchestrator
   useEffect(() => {
@@ -117,6 +220,13 @@ export default function App() {
       setTasks(JSON.parse(localStorage.getItem('pomo_guest_tasks') || '[]'));
       setCompletedTasks(JSON.parse(localStorage.getItem('pomo_guest_completed') || '[]'));
       setBuckets(JSON.parse(localStorage.getItem('pomo_guest_buckets') || '["Project", "Firm Initiative", "Personal"]'));
+      
+      // Hydrate custom preferences from localStorage
+      setEnableReminders(JSON.parse(localStorage.getItem('pomo_pref_reminders') ?? 'true'));
+      setReminderIntervalHours(JSON.parse(localStorage.getItem('pomo_pref_reminder_hours') ?? '2'));
+      setEnableTimerChime(JSON.parse(localStorage.getItem('pomo_pref_timer_chime') ?? 'true'));
+      setEnableTaskChime(JSON.parse(localStorage.getItem('pomo_pref_task_chime') ?? 'true'));
+      
       setIsAuthenticated(true);
       return;
     }
@@ -132,6 +242,14 @@ export default function App() {
           if (data.tasks) setTasks(data.tasks);
           if (data.completedTasks) setCompletedTasks(data.completedTasks);
           if (data.buckets) setBuckets(data.buckets);
+          
+          // Hydrate profile custom notification controls if sent by DB
+          if (data.preferences) {
+            if (data.preferences.enableReminders !== undefined) setEnableReminders(data.preferences.enableReminders);
+            if (data.preferences.reminderIntervalHours !== undefined) setReminderIntervalHours(data.preferences.reminderIntervalHours);
+            if (data.preferences.enableTimerChime !== undefined) setEnableTimerChime(data.preferences.enableTimerChime);
+            if (data.preferences.enableTaskChime !== undefined) setEnableTaskChime(data.preferences.enableTaskChime);
+          }
           setIsAuthenticated(true);
         } else {
           handleLogOut();
@@ -143,12 +261,27 @@ export default function App() {
     hydrateProfile();
   }, [username, passcode, isGuestMode]);
 
-  const syncToStorage = async (updatedTasks, updatedCompleted, updatedBuckets) => {
+  const syncToStorage = async (updatedTasks, updatedCompleted, updatedBuckets, updatedPrefs = null) => {
     const currentBuckets = updatedBuckets || buckets;
+    
+    // Construct real-time configuration values package
+    const preferencesPayload = updatedPrefs || {
+      enableReminders,
+      reminderIntervalHours,
+      enableTimerChime,
+      enableTaskChime
+    };
+
     if (isGuestMode) {
       localStorage.setItem('pomo_guest_tasks', JSON.stringify(updatedTasks));
       localStorage.setItem('pomo_guest_completed', JSON.stringify(updatedCompleted));
       localStorage.setItem('pomo_guest_buckets', JSON.stringify(currentBuckets));
+      
+      // Commit specific local preference flags
+      localStorage.setItem('pomo_pref_reminders', JSON.stringify(preferencesPayload.enableReminders));
+      localStorage.setItem('pomo_pref_reminder_hours', JSON.stringify(preferencesPayload.reminderIntervalHours));
+      localStorage.setItem('pomo_pref_timer_chime', JSON.stringify(preferencesPayload.enableTimerChime));
+      localStorage.setItem('pomo_pref_task_chime', JSON.stringify(preferencesPayload.enableTaskChime));
     } else {
       if (!username || !passcode) return;
       try {
@@ -159,12 +292,29 @@ export default function App() {
             'x-app-user': username,
             'x-app-passcode': passcode
           },
-          body: JSON.stringify({ tasks: updatedTasks, completedTasks: updatedCompleted, buckets: currentBuckets })
+          body: JSON.stringify({ 
+            tasks: updatedTasks, 
+            completedTasks: updatedCompleted, 
+            buckets: currentBuckets,
+            preferences: preferencesPayload
+          })
         });
       } catch (e) {
         console.error("Cloud database syncing exception:", e);
       }
     }
+  };
+
+  // Helper trigger to save state variations safely when standalone toggles change
+  const handlePreferenceChange = (key, value) => {
+    const nextPrefs = {
+      enableReminders,
+      reminderIntervalHours,
+      enableTimerChime,
+      enableTaskChime,
+      [key]: value
+    };
+    syncToStorage(tasks, completedTasks, buckets, nextPrefs);
   };
 
   // --- Authentication Handshaking ---
@@ -230,6 +380,10 @@ export default function App() {
     localStorage.removeItem('pomo_guest_completed');
     localStorage.removeItem('pomo_guest_buckets');
     localStorage.removeItem('pomo_guest_mode');
+    localStorage.removeItem('pomo_pref_reminders');
+    localStorage.removeItem('pomo_pref_reminder_hours');
+    localStorage.removeItem('pomo_pref_timer_chime');
+    localStorage.removeItem('pomo_pref_task_chime');
   };
 
   const handleLogOut = () => {
@@ -260,12 +414,12 @@ export default function App() {
         text: taskText.trim(), 
         bucket: taskBucket, 
         priority: taskPriority,
-        dueDate: taskDueDate || getTodayString() // Fallback safety
+        dueDate: taskDueDate || getTodayString() 
       }
     ];
     setTasks(updated);
     setTaskText('');
-    setTaskDueDate(getTodayString()); // Reset input to today
+    setTaskDueDate(getTodayString()); 
     syncToStorage(updated, completedTasks, buckets);
   };
 
@@ -273,7 +427,6 @@ export default function App() {
     const target = tasks.find(t => t.id === id);
     if (!target) return;
 
-    // Remove from active focus if this task was selected
     if (activeFocusTask && activeFocusTask.id === id) {
       setActiveFocusTask(null);
     }
@@ -282,13 +435,17 @@ export default function App() {
     const updatedCompleted = [...completedTasks, { ...target, completedAt: new Date().toLocaleDateString() }];
     setTasks(updatedTasks);
     setCompletedTasks(updatedCompleted);
+    
+    // Fire completion metrics audio chime alongside graphics
+    playAudioChime('task-complete');
     if (typeof confetti === 'function') confetti({ particleCount: 60, spread: 50, colors: ['#aac7ff', '#bacfbc'] });
+    
     syncToStorage(updatedTasks, updatedCompleted, buckets);
   };
 
   const handleSelectFocusTask = (task) => {
     if (activeFocusTask && activeFocusTask.id === task.id) {
-      setActiveFocusTask(null); // Toggle off if clicked again
+      setActiveFocusTask(null); 
     } else {
       setActiveFocusTask(task);
     }
@@ -322,7 +479,6 @@ export default function App() {
         return (PRIORITY_WEIGHTS[b.priority] || 2) - (PRIORITY_WEIGHTS[a.priority] || 2);
       }
       if (sortBy === 'dueDate') {
-        // Safe true chronological date sorting
         const dateA = new Date(a.dueDate || '9999-12-31');
         const dateB = new Date(b.dueDate || '9999-12-31');
         return dateA - dateB;
@@ -372,20 +528,17 @@ export default function App() {
     return counts;
   };
 
-  // --- Formatting Helpers ---
   const formatTime = (secs) => {
     const mins = Math.floor(secs / 60);
     const remainder = secs % 60;
     return `${mins.toString().padStart(2, '0')}:${remainder.toString().padStart(2, '0')}`;
   };
 
-  // Humanizes chronological YYYY-MM-DD input strings to a cleaner user format
   const formatDisplayDate = (dateString) => {
     if (!dateString) return 'No Date';
     try {
       const parts = dateString.split('-');
       if (parts.length !== 3) return dateString;
-      // Parsing as local variables to bypass standard browser UTC midnight offset adjustments
       const date = new Date(parts[0], parts[1] - 1, parts[2]);
       return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
     } catch (e) {
@@ -494,14 +647,14 @@ export default function App() {
         </button>
       </div>
 
-      {/* TAB 1: CORE WORKSPACE (DUAL CARDS: TIMER LEFT / TASKS RIGHT) */}
+      {/* TAB 1: CORE WORKSPACE */}
       {activeTab === 'tasks' && (
         <div className="w-full max-w-5xl grid grid-cols-1 md:grid-cols-5 gap-6 items-start">
           
-          {/* LEFT PANEL: Dedicated Pomodoro Card Module (Spans 2 columns) */}
+          {/* LEFT PANEL: Pomodoro & Settings Framework */}
           <div className="md:col-span-2 bg-[#1c1b1f] border border-[#2d2b30] rounded-[32px] p-6 flex flex-col gap-5 shadow-lg h-full sticky top-8">
             <div className="flex items-center gap-2 border-b border-neutral-800/60 pb-3">
-              <Crosshair className="h-4 w-4 text-[#aac7ff]" />
+              <Plus className="h-4 w-4 text-[#aac7ff]" />
               <h2 className="text-xs font-semibold tracking-widest text-[#919191] uppercase">Time Box Deck</h2>
             </div>
 
@@ -548,14 +701,13 @@ export default function App() {
                 <button 
                   onClick={() => setTimerMode(timerMode === 'Focus' ? 'Break' : 'Focus')}
                   className="px-3 py-2 bg-[#1c1b1f] border border-[#2d2b30] hover:border-neutral-500 text-neutral-400 hover:text-white rounded-xl text-[11px] font-medium transition-colors"
-                  title="Toggle Mode Manual"
                 >
                   Switch Mode
                 </button>
                 
                 <button 
                   onClick={() => setIsTimerRunning(!isTimerRunning)}
-                  className={`px-4 py-2 rounded-xl text-[11px] font-medium transition-all flex items-center gap-1.5 ${isTimerRunning ? 'bg-[#3d1d1d] text-[#ffb4ab] border border-[#601414]' : 'bg-[#212433] text-[#aac7ff] border border-[#30374d] hover:bg-[#2a3047]'}`}
+                  className={`px-4 py-2 rounded-xl text-[11px] font-medium transition-all flex items-center gap-1.5 ${isTimerRunning ? 'bg-[#3d1d1d] text-[#ffb4ab] border border-[#601414]' : 'bg-[#212433] text-[#aac7ff] border-[#30374d] hover:bg-[#2a3047]'}`}
                 >
                   {isTimerRunning ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
                   {isTimerRunning ? 'Pause' : 'Start'}
@@ -564,7 +716,6 @@ export default function App() {
                 <button 
                   onClick={() => { setIsTimerRunning(false); setTimeLeft(timerMode === 'Focus' ? focusLength * 60 : breakLength * 60); }}
                   className="p-2 bg-[#25232a] border border-[#49454f] text-neutral-400 hover:text-white rounded-xl transition-colors"
-                  title="Reset Timer"
                 >
                   <RotateCcw className="h-3.5 w-3.5" />
                 </button>
@@ -572,43 +723,112 @@ export default function App() {
                 <button 
                   onClick={() => setShowTimerConfig(!showTimerConfig)} 
                   className={`p-2 rounded-xl border transition-colors ${showTimerConfig ? 'bg-[#aac7ff] text-[#002f66] border-[#aac7ff]' : 'bg-[#25232a] border-[#49454f] text-neutral-400 hover:text-white'}`}
-                  title="Configure Intervals"
                 >
                   <Sliders className="h-3.5 w-3.5" />
                 </button>
               </div>
 
-              {/* Configurable Multi-Interval Settings Panel */}
+              {/* Expanded Configurations Control Deck */}
               {showTimerConfig && (
-                <div className="w-full p-3 bg-[#1c1b1f] border border-[#2d2b30] rounded-xl grid grid-cols-2 gap-3 text-xs text-left animate-fade-in">
-                  <div className="space-y-1">
-                    <label className="text-neutral-400 font-medium block text-[10px]">Focus Mins:</label>
-                    <input 
-                      type="number" 
-                      min="1" 
-                      max="180" 
-                      value={focusLength} 
-                      onChange={(e) => setFocusLength(Math.max(1, parseInt(e.target.value) || 1))} 
-                      className="w-full bg-[#121212] border border-[#49454f] rounded-lg px-2.5 py-1 text-xs text-[#e3e3e3] focus:outline-none focus:border-[#aac7ff]" 
-                    />
+                <div className="w-full p-4 bg-[#1c1b1f] border border-[#2d2b30] rounded-xl text-xs text-left space-y-4 animate-fade-in shadow-inner">
+                  {/* Part A: Interval Length Configuration */}
+                  <div>
+                    <span className="text-[10px] font-bold text-[#aac7ff] tracking-wider block uppercase mb-2">Interval Durations</span>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <label className="text-neutral-400 block text-[10px]">Focus Minutes:</label>
+                        <input 
+                          type="number" min="1" max="180" 
+                          value={focusLength} 
+                          onChange={(e) => setFocusLength(Math.max(1, parseInt(e.target.value) || 1))} 
+                          className="w-full bg-[#121212] border border-[#49454f] rounded-lg px-2 py-1 text-xs text-[#e3e3e3] focus:outline-none focus:border-[#aac7ff]" 
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-neutral-400 block text-[10px]">Break Minutes:</label>
+                        <input 
+                          type="number" min="1" max="60" 
+                          value={breakLength} 
+                          onChange={(e) => setBreakLength(Math.max(1, parseInt(e.target.value) || 1))} 
+                          className="w-full bg-[#121212] border border-[#49454f] rounded-lg px-2 py-1 text-xs text-[#e3e3e3] focus:outline-none focus:border-[#aac7ff]" 
+                        />
+                      </div>
+                    </div>
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-neutral-400 font-medium block text-[10px]">Break Mins:</label>
-                    <input 
-                      type="number" 
-                      min="1" 
-                      max="60" 
-                      value={breakLength} 
-                      onChange={(e) => setBreakLength(Math.max(1, parseInt(e.target.value) || 1))} 
-                      className="w-full bg-[#121212] border border-[#49454f] rounded-lg px-2.5 py-1 text-xs text-[#e3e3e3] focus:outline-none focus:border-[#aac7ff]" 
-                    />
+
+                  {/* Part B: Audio & Alert Configuration Framework */}
+                  <div className="border-t border-neutral-800/80 pt-3 space-y-3">
+                    <span className="text-[10px] font-bold text-[#aac7ff] tracking-wider block uppercase flex items-center gap-1.5">
+                      <Bell className="h-3 w-3" /> Alerts & Audio Preferences
+                    </span>
+                    
+                    {/* 1. Systematic Chime Toggles */}
+                    <div className="space-y-2 bg-[#121212] p-2.5 rounded-xl border border-neutral-800/60">
+                      <div className="flex items-center justify-between">
+                        <span className="text-neutral-300 text-[11px] flex items-center gap-1">
+                          {enableTimerChime ? <Volume2 className="h-3 w-3 text-[#bacfbc]" /> : <VolumeX className="h-3 w-3 text-neutral-600" />} 
+                          Timer End Chime
+                        </span>
+                        <input 
+                          type="checkbox" checked={enableTimerChime} 
+                          onChange={(e) => { setEnableTimerChime(e.target.checked); handlePreferenceChange('enableTimerChime', e.target.checked); }}
+                          className="w-3.5 h-3.5 accent-[#aac7ff] cursor-pointer"
+                        />
+                      </div>
+                      <div className="flex items-center justify-between border-t border-neutral-900 pt-2">
+                        <span className="text-neutral-300 text-[11px] flex items-center gap-1">
+                          {enableTaskChime ? <Volume2 className="h-3 w-3 text-[#bacfbc]" /> : <VolumeX className="h-3 w-3 text-neutral-600" />} 
+                          Task Completed Chime
+                        </span>
+                        <input 
+                          type="checkbox" checked={enableTaskChime} 
+                          onChange={(e) => { setEnableTaskChime(e.target.checked); handlePreferenceChange('enableTaskChime', e.target.checked); }}
+                          className="w-3.5 h-3.5 accent-[#aac7ff] cursor-pointer"
+                        />
+                      </div>
+                    </div>
+
+                    {/* 2. Background Standup Reminders */}
+                    <div className="space-y-2 bg-[#121212] p-2.5 rounded-xl border border-neutral-800/60">
+                      <div className="flex items-center justify-between">
+                        <span className="text-neutral-300 text-[11px] flex items-center gap-1">
+                          {enableReminders ? <Bell className="h-3 w-3 text-[#ffe082]" /> : <BellOff className="h-3 w-3 text-neutral-600" />}
+                          Pending Task Reminders
+                        </span>
+                        <input 
+                          type="checkbox" checked={enableReminders} 
+                          onChange={(e) => { setEnableReminders(e.target.checked); handlePreferenceChange('enableReminders', e.target.checked); }}
+                          className="w-3.5 h-3.5 accent-[#aac7ff] cursor-pointer"
+                        />
+                      </div>
+                      
+                      {enableReminders && (
+                        <div className="flex items-center gap-2 pt-1 border-t border-neutral-900 mt-1 animate-fade-in">
+                          <label className="text-[10px] text-neutral-400 flex-1">Frequency Cycle:</label>
+                          <div className="flex items-center gap-1.5 w-24">
+                            <input 
+                              type="number" min="1" max="24"
+                              value={reminderIntervalHours}
+                              onChange={(e) => { 
+                                const val = Math.max(1, parseInt(e.target.value) || 1);
+                                setReminderIntervalHours(val); 
+                                handlePreferenceChange('reminderIntervalHours', val);
+                              }}
+                              className="w-full bg-[#1c1b1f] border border-[#49454f] rounded px-1.5 py-0.5 text-center text-xs focus:outline-none focus:border-[#aac7ff]"
+                            />
+                            <span className="text-[10px] text-neutral-500">hrs</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
+
                 </div>
               )}
             </div>
           </div>
 
-          {/* RIGHT PANEL: TASKS WORKSPACE (Spans 3 columns) */}
+          {/* RIGHT PANEL: TASKS WORKSPACE */}
           <div className="md:col-span-3 bg-[#1c1b1f] border border-[#2d2b30] rounded-[32px] p-6 flex flex-col gap-5 shadow-lg">
             <div>
               <div className="flex justify-between items-center mb-4">
@@ -656,7 +876,7 @@ export default function App() {
                 </div>
               )}
 
-              {/* Active Core Streams */}
+              {/* Active Task Stream Grid */}
               <div className="space-y-2 max-h-[290px] overflow-y-auto pr-1">
                 {getSortedTasks().map((task) => {
                   const isCurrentTarget = activeFocusTask && activeFocusTask.id === task.id;
@@ -665,7 +885,6 @@ export default function App() {
                       key={task.id} 
                       className={`p-3.5 bg-[#121212] border rounded-xl flex items-center justify-between gap-4 group transition-all duration-200 cursor-pointer ${isCurrentTarget ? 'border-[#aac7ff] bg-[#171a24]' : 'border-[#2d2b30] hover:border-[#43474e]'}`}
                       onClick={() => handleSelectFocusTask(task)}
-                      title="Click to set as current focus deck item"
                     >
                       <div className="flex flex-col min-w-0 flex-1 gap-2">
                         <span className="text-xs font-medium text-[#e3e3e3] break-words flex items-center gap-1.5">
@@ -694,7 +913,7 @@ export default function App() {
                 })}
                 {tasks.length === 0 && (
                   <div className="text-center py-8 border border-dashed border-[#2d2b30] rounded-xl bg-[#151418]">
-                    <p className="text-xs text-[#79747e]">No active tasks. Use the configuration deck below to add objectives.</p>
+                    <p className="text-xs text-[#79747e]">No active tasks. Use the entry deck below to add objectives.</p>
                   </div>
                 )}
               </div>
@@ -768,7 +987,6 @@ export default function App() {
                     </select>
                   </div>
 
-                  {/* Standard Calendar Picker */}
                   <div className="flex items-center gap-1.5">
                     <span className="text-[10px] text-[#919191] font-medium">Due Date:</span>
                     <input 
@@ -814,7 +1032,6 @@ export default function App() {
             </div>
           </div>
 
-          {/* Lifetime Distribution Metrics */}
           <div className="grid grid-cols-3 gap-3">
             <div className="bg-[#121212] border border-[#2d2b30] p-3.5 rounded-xl text-center space-y-1">
               <span className="text-[9px] font-bold text-[#ffb4ab] uppercase tracking-wider block">High Priority</span>
@@ -830,7 +1047,7 @@ export default function App() {
             </div>
           </div>
 
-          {/* Productivity Velocity Chart (Last 7 Active Iterations) */}
+          {/* Productivity Velocity Chart */}
           <div className="bg-[#121212] border border-[#2d2b30] rounded-2xl p-4 space-y-4">
             <span className="text-[10px] font-bold text-[#919191] uppercase tracking-wider block">Completion Engine Output (Last 7 Days)</span>
             
@@ -841,7 +1058,6 @@ export default function App() {
                 
                 return (
                   <div key={idx} className="flex flex-col items-center flex-1 group relative h-full justify-end">
-                    {/* Tooltip on Hover */}
                     <div className="absolute bottom-full mb-2 bg-[#1c1b1f] border border-[#49454f] rounded-lg p-2 text-[9px] text-[#e3e3e3] opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 space-y-0.5 shadow-xl min-w-[75px] text-center">
                       <p className="font-bold border-b border-neutral-800 pb-0.5 mb-1">{day.date}</p>
                       <p className="text-[#ffb4ab]">High: {day.High}</p>
@@ -850,15 +1066,13 @@ export default function App() {
                       <p className="font-bold text-[#aac7ff] pt-0.5 border-t border-neutral-800 mt-0.5">Total: {total}</p>
                     </div>
 
-                    {/* Stacked Vertical Segment Bar */}
                     <div 
                       className="w-full rounded-t-md transition-all duration-500 bg-[#aac7ff]/20 group-hover:bg-[#aac7ff]/30 flex flex-col justify-end overflow-hidden"
                       style={{ height: `${Math.max(8, percentage)}%` }}
                     >
-                      {/* Segment Colors inside the Bar matching priority colors */}
-                      {day.High > 0 && <div className="bg-[#ffb4ab]/80 flex-1 min-h-[3px]" title={`High: ${day.High}`} />}
-                      {day.Medium > 0 && <div className="bg-[#ffe082]/80 flex-1 min-h-[3px]" title={`Medium: ${day.Medium}`} />}
-                      {day.Low > 0 && <div className="bg-[#c2e7ff]/80 flex-1 min-h-[3px]" title={`Low: ${day.Low}`} />}
+                      {day.High > 0 && <div className="bg-[#ffb4ab]/80 flex-1 min-h-[3px]" />}
+                      {day.Medium > 0 && <div className="bg-[#ffe082]/80 flex-1 min-h-[3px]" />}
+                      {day.Low > 0 && <div className="bg-[#c2e7ff]/80 flex-1 min-h-[3px]" />}
                     </div>
                     
                     <span className="text-[8px] text-neutral-500 mt-2 truncate max-w-[45px] font-mono">{day.date.split('/')[1] || day.date}</span>

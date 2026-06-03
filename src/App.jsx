@@ -49,7 +49,7 @@ export default function App() {
 
   // --- Authentication & Session States ---
   const [username, setUsername] = useState(() => localStorage.getItem('pomo_user_session') || '');
-  const [passcode, setPasscode] = useState(() => localStorage.getItem('pomo_token_session'] || '');
+  const [passcode, setPasscode] = useState(() => localStorage.getItem('pomo_token_session') || '');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isGuestMode, setIsGuestMode] = useState(() => JSON.parse(localStorage.getItem('pomo_guest_mode') || 'false'));
   

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import confetti from 'canvas-confetti';
 import { 
   Plus, Settings, User, Lock, ArrowRight, EyeOff, 
-  Trash2, CheckCircle, ArrowUpDown, ShieldAlert, BarChart2, List, Play, Pause, RotateCcw, Sliders, Target, Crosshair
+  Trash2, CheckCircle, ArrowUpDown, ShieldAlert, BarChart2, List, Play, Pause, RotateCcw, Sliders, Target, Crosshair, Calendar
 } from 'lucide-react';
 
 // Subtle Personal Branding Link Component
@@ -26,6 +26,14 @@ const ProjectFooter = () => {
 
 const PRIORITY_WEIGHTS = { High: 3, Medium: 2, Low: 1 };
 
+// Helper to get today's date string in YYYY-MM-DD format for input defaults
+const getTodayString = () => {
+  const today = new Date();
+  const offset = today.getTimezoneOffset();
+  const localToday = new Date(today.getTime() - (offset * 60 * 1000));
+  return localToday.toISOString().split('T')[0];
+};
+
 export default function App() {
   // --- Configurable Pomodoro Timer States ---
   const [focusLength, setFocusLength] = useState(25); // in minutes
@@ -41,7 +49,7 @@ export default function App() {
 
   // --- Authentication & Session States ---
   const [username, setUsername] = useState(() => localStorage.getItem('pomo_user_session') || '');
-  const [passcode, setPasscode] = useState(() => localStorage.getItem('pomo_token_session') || '');
+  const [passcode, setPasscode] = useState(() => localStorage.getItem('pomo_token_session'] || '');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isGuestMode, setIsGuestMode] = useState(() => JSON.parse(localStorage.getItem('pomo_guest_mode') || 'false'));
   
@@ -61,7 +69,7 @@ export default function App() {
   const [taskText, setTaskText] = useState('');
   const [taskBucket, setTaskBucket] = useState('Project');
   const [taskPriority, setTaskPriority] = useState('Medium');
-  const [taskDueDate, setTaskDueDate] = useState('Today');
+  const [taskDueDate, setTaskDueDate] = useState(getTodayString());
 
   // --- Navigation & Filter States ---
   const [activeTab, setActiveTab] = useState('tasks');
@@ -252,11 +260,12 @@ export default function App() {
         text: taskText.trim(), 
         bucket: taskBucket, 
         priority: taskPriority,
-        dueDate: taskDueDate
+        dueDate: taskDueDate || getTodayString() // Fallback safety
       }
     ];
     setTasks(updated);
     setTaskText('');
+    setTaskDueDate(getTodayString()); // Reset input to today
     syncToStorage(updated, completedTasks, buckets);
   };
 
@@ -313,8 +322,10 @@ export default function App() {
         return (PRIORITY_WEIGHTS[b.priority] || 2) - (PRIORITY_WEIGHTS[a.priority] || 2);
       }
       if (sortBy === 'dueDate') {
-        const dateMap = { 'Today': 1, 'Tomorrow': 2, 'This Week': 3, 'Later': 4 };
-        return (dateMap[a.dueDate] || 5) - (dateMap[b.dueDate] || 5);
+        // Safe true chronological date sorting
+        const dateA = new Date(a.dueDate || '9999-12-31');
+        const dateB = new Date(b.dueDate || '9999-12-31');
+        return dateA - dateB;
       }
       return 0;
     });
@@ -366,6 +377,20 @@ export default function App() {
     const mins = Math.floor(secs / 60);
     const remainder = secs % 60;
     return `${mins.toString().padStart(2, '0')}:${remainder.toString().padStart(2, '0')}`;
+  };
+
+  // Humanizes chronological YYYY-MM-DD input strings to a cleaner user format
+  const formatDisplayDate = (dateString) => {
+    if (!dateString) return 'No Date';
+    try {
+      const parts = dateString.split('-');
+      if (parts.length !== 3) return dateString;
+      // Parsing as local variables to bypass standard browser UTC midnight offset adjustments
+      const date = new Date(parts[0], parts[1] - 1, parts[2]);
+      return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+    } catch (e) {
+      return dateString;
+    }
   };
 
   const getBucketStyle = (bucket) => {
@@ -473,7 +498,7 @@ export default function App() {
       {activeTab === 'tasks' && (
         <div className="w-full max-w-5xl grid grid-cols-1 md:grid-cols-5 gap-6 items-start">
           
-          {/* LEFT PANEL: Restored V3 Dedicated Pomodoro Card Module (Spans 2 columns) */}
+          {/* LEFT PANEL: Dedicated Pomodoro Card Module (Spans 2 columns) */}
           <div className="md:col-span-2 bg-[#1c1b1f] border border-[#2d2b30] rounded-[32px] p-6 flex flex-col gap-5 shadow-lg h-full sticky top-8">
             <div className="flex items-center gap-2 border-b border-neutral-800/60 pb-3">
               <Crosshair className="h-4 w-4 text-[#aac7ff]" />
@@ -482,7 +507,7 @@ export default function App() {
 
             <div className="bg-[#121212] border border-[#2d2b30] rounded-2xl p-6 flex flex-col items-center justify-center text-center space-y-5">
               
-              {/* V3 High-Contrast Large Counter */}
+              {/* Counter Display */}
               <div className="space-y-1 select-none w-full">
                 <h1 className={`text-6xl font-bold font-mono tracking-wider transition-all duration-300 ${timerMode === 'Focus' ? 'text-[#aac7ff]' : 'text-[#ffe082]'}`}>
                   {formatTime(timeLeft)}
@@ -494,7 +519,7 @@ export default function App() {
                 </div>
               </div>
 
-              {/* DYNAMIC FOCUS TARGET SLOT */}
+              {/* Focus Target Slot */}
               <div className="w-full border-t border-b border-neutral-800/60 py-3.5 my-1 min-h-[72px] flex flex-col justify-center items-center">
                 {activeFocusTask ? (
                   <div className="space-y-1 w-full px-2">
@@ -504,6 +529,11 @@ export default function App() {
                     <p className="text-xs text-[#e3e3e3] font-medium text-center line-clamp-2 break-words">
                       {activeFocusTask.text}
                     </p>
+                    {activeFocusTask.dueDate && (
+                      <span className="text-[9px] text-neutral-500 block text-center">
+                        Due: {formatDisplayDate(activeFocusTask.dueDate)}
+                      </span>
+                    )}
                   </div>
                 ) : (
                   <div className="text-center text-neutral-600 px-4 space-y-1">
@@ -513,7 +543,7 @@ export default function App() {
                 )}
               </div>
 
-              {/* V3 Linear Bottom Action Toolbar */}
+              {/* Action Toolbar */}
               <div className="flex items-center justify-center gap-2 w-full">
                 <button 
                   onClick={() => setTimerMode(timerMode === 'Focus' ? 'Break' : 'Focus')}
@@ -595,7 +625,7 @@ export default function App() {
                       onClick={() => setSortBy('dueDate')} 
                       className={`px-2 py-1 rounded-md transition-all flex items-center gap-1 ${sortBy === 'dueDate' ? 'bg-[#25232a] text-[#aac7ff] font-semibold' : 'hover:text-white'}`}
                     >
-                      <ArrowUpDown className="h-2.5 w-2.5" /> Due Date
+                      <Calendar className="h-2.5 w-2.5" /> Calendar Order
                     </button>
                   </div>
                 </div>
@@ -647,7 +677,10 @@ export default function App() {
                             {task.priority}
                           </span>
                           <span className={`px-2 py-0.5 rounded-full border ${getBucketStyle(task.bucket)}`}>{task.bucket}</span>
-                          <span>• Due: <strong className="text-neutral-300">{task.dueDate}</strong></span>
+                          <span className="flex items-center gap-1">
+                            <Calendar className="h-2.5 w-2.5 text-neutral-500" /> 
+                            Due: <strong className="text-neutral-300">{formatDisplayDate(task.dueDate)}</strong>
+                          </span>
                         </div>
                       </div>
                       <button 
@@ -691,6 +724,8 @@ export default function App() {
                         <span>•</span>
                         <span>Priority: {task.priority}</span>
                         <span>•</span>
+                        <span>Due: {formatDisplayDate(task.dueDate)}</span>
+                        <span>•</span>
                         <span>Completed: {task.completedAt || 'Recent'}</span>
                       </div>
                     </div>
@@ -733,14 +768,15 @@ export default function App() {
                     </select>
                   </div>
 
+                  {/* Standard Calendar Picker */}
                   <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] text-[#919191] font-medium">Due:</span>
-                    <select value={taskDueDate} onChange={(e) => setTaskDueDate(e.target.value)} className="bg-[#1c1b1f] border border-[#49454f] text-[#e3e3e3] text-[11px] rounded-lg px-2 py-1 focus:outline-none focus:border-[#aac7ff] cursor-pointer">
-                      <option value="Today">Today</option>
-                      <option value="Tomorrow">Tomorrow</option>
-                      <option value="This Week">This Week</option>
-                      <option value="Later">Later</option>
-                    </select>
+                    <span className="text-[10px] text-[#919191] font-medium">Due Date:</span>
+                    <input 
+                      type="date" 
+                      value={taskDueDate} 
+                      onChange={(e) => setTaskDueDate(e.target.value)} 
+                      className="bg-[#1c1b1f] border border-[#49454f] text-[#e3e3e3] text-[11px] rounded-lg px-2 py-0.5 focus:outline-none focus:border-[#aac7ff] cursor-pointer text-center scheme-dark"
+                    />
                   </div>
                 </div>
 
@@ -848,7 +884,6 @@ export default function App() {
 
       {/* Subtle Personal Branding Footer */}
       <ProjectFooter />
-      <h1>test</h1>
     </div>
   );
 }

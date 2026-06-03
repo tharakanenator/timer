@@ -848,6 +848,7 @@ export default function App() {
 
       {/* Subtle Personal Branding Footer */}
       <ProjectFooter />
+      <h1>test</h1>
     </div>
   );
 }
